@@ -22,7 +22,7 @@
   // You start with R$1,000. Normal games are free and pay nothing. Ranked: buy in at the "market price" for the
   // number of prompts, get paid R$1 per 5 points. The price sits ~10% above what an average player wins back, so
   // beating the average = profit and the house keeps a small edge. See ROBLOX.md, "Money" for the real-Roblox rules.
-  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 5, HOUSE_EDGE = 1.1, AVG_PER_PROMPT = 25.45;
+  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 20, HOUSE_EDGE = 1.08, AVG_PER_PROMPT = 25.45; // R$1 per 20 pts; price ~8% over the average payout (5: R$7, 7: R$10, 10: R$14)
   const rankedLen = () => (LENGTHS.includes(store.settings.len) && store.settings.len ? store.settings.len : 10);
   const marketPrice = len => Math.ceil((AVG_PER_PROMPT * len / RANKED_RATE) * HOUSE_EDGE);
   const coinsFor = (score, ranked) => (ranked ? Math.floor(score / RANKED_RATE) : 0);
@@ -980,7 +980,7 @@
     const c = store.coins ?? START_COINS, price = marketPrice(rankedLen());
     $$('.coin-bal').forEach(el => { el.innerHTML = coinTag(c); });
     const rb = $('#btn-ranked');
-    if (rb) { const L = rankedLen(); rb.innerHTML = `RANKED · ${L} PROMPTS · BUY IN ${coinTag(price)} <span class="rk-sub">pays R$1 per ${RANKED_RATE} pts · beat ${Math.round(price * RANKED_RATE)} to profit</span>`; rb.classList.toggle('poor', c < price); }
+    if (rb) { const L = rankedLen(); rb.innerHTML = `RANKED · ${L} PROMPTS · ${coinTag(price)}`; rb.title = `Pays R$1 per ${RANKED_RATE} points. Score ${price * RANKED_RATE}+ to profit.`; rb.classList.toggle('poor', c < price); }
   }
   function renderLenPick() {
     const cur = LENGTHS.includes(store.settings.len) ? store.settings.len : 10;
