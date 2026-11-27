@@ -866,39 +866,55 @@
       ctx.fillStyle = '#4f8f9b'; ctx.fillRect(x, y + w + 1, 1, 1);
     }
     // the toilet the duck got flushed down, sitting on the waterline
-    const k = O.view === 'results' ? 2 : 3;
+    const big = O.view === 'title' || O.view === 'intro';
+    const k = O.view === 'results' ? 2 : big ? (window.innerWidth < 700 ? 4 : 5) : 3;
     const bs = sprite('toilet');
-    const bx = Math.round(O.view === 'results' ? O.W * 0.1 - bs.w * k / 2 : O.W * 0.17 - bs.w);
+    const cxF = O.view === 'results' ? 0.1 : big ? (window.innerWidth < 700 ? 0.24 : 0.17) : 0.17;
+    const bx = Math.round(O.W * cxF - bs.w * k / 2);
+    O.toiletCX = bx + bs.w * k / 2;
     const surfAt = Math.round(1.6 + Math.sin((bx + bs.w * k / 2) * 0.035 + O.t * 0.9) * 1.3);
     const ty = y + surfAt - (bs.h - 2) * k;
     ctx.drawImage(bs.c, bx, ty, bs.w * k, bs.h * k);
     if (O.view === 'title' || O.view === 'intro') drawDuckInBowl(ctx, bs, bx, ty, k);
   }
 
-  // The duck sits in the bowl on the title screen; starting a game flushes it (spin, shrink, gone).
-  const FLUSH_SWIRL = 1500, FLUSH_DROP = 750;
+  // The duck sits in the bowl on the title screen; starting a game flushes it:
+  // it sloshes side to side, then circles the bowl, spinning and shrinking until it's sucked down.
+  const FLUSH_SWIRL = 2100, FLUSH_DROP = 750;
   function flushP() { return O.flushT0 ? (performance.now() - O.flushT0) / FLUSH_SWIRL : -1; }
   function drawDuckInBowl(ctx, bs, bx, ty, k) {
     const p = O.view === 'intro' ? (O.reduced ? 1 : flushP()) : -1;
-    const cx = bx + Math.round(bs.w * k / 2), rimY = ty + 6 * k;
-    if (p >= 0 && p < 1.15) { // swirling water in the bowl
-      const r = 15 - Math.min(1, p) * 9, n = 14;
+    const cx = bx + Math.round(bs.w * k / 2), rimY = ty + 6 * k, bowlR = 6.5 * k;
+    const ds = sprite('duck' + (p >= 0 ? Math.floor(O.t * 12) % 2 : 0));
+    const ds0 = k * 0.42; // duck size relative to the toilet
+    if (p >= 0 && p < 1.1) {
+      // churning water: a spiral of foam that tightens as the flush goes down
+      const n = 26, sw = Math.min(1, Math.max(0, (p - 0.15) / 0.85));
       for (let i = 0; i < n; i++) {
-        const a = O.t * (8 + p * 14) + i * (Math.PI * 2 / n);
+        const a = O.t * (6 + sw * 22) + i * (Math.PI * 2 / n);
+        const r = bowlR * (1 - sw * 0.6) * (0.55 + 0.45 * ((i * 7) % 5) / 4);
         ctx.fillStyle = i % 3 ? '#9fd6e0' : '#ffffff';
-        ctx.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(rimY + 1 + Math.sin(a) * r * 0.28), 2, 1);
+        ctx.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(rimY + 2 + Math.sin(a) * r * 0.25), 2, 2);
       }
-      if (p < 0.35) for (let i = 0; i < 3; i++) { // splashes flying out
-        const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2, d = 4 + Math.random() * 14 * p * 3;
-        ctx.fillStyle = 'rgba(200,240,255,0.85)'; ctx.fillRect(Math.round(cx + Math.cos(a) * d), Math.round(rimY - 2 + Math.sin(a) * d), 1, 1);
+      // splashes jumping out of the bowl
+      if (p < 0.8) for (let i = 0; i < 4; i++) {
+        const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, d = 6 + Math.random() * bowlR * 1.4;
+        ctx.fillStyle = Math.random() < 0.5 ? '#ffffff' : '#9fd6e0';
+        ctx.fillRect(Math.round(cx + Math.cos(a) * d), Math.round(rimY - 2 + Math.sin(a) * d * 0.9), 2, 2);
       }
     }
     if (p >= 1) { ctx.drawImage(bs.c, 0, 7, bs.w, bs.h - 7, bx, ty + 7 * k, bs.w * k, (bs.h - 7) * k); return; }
-    const ds = sprite('duck' + (p >= 0 ? Math.floor(O.t * 12) % 2 : 0));
-    const s = p >= 0 ? 2 * (1 - Math.pow(p, 1.6) * 0.85) : 2;
-    const bob = p >= 0 ? p * p * 10 : Math.sin(O.t * 1.8) * 1.2;
-    const cy = rimY + 3 - ds.h + bob;
-    ctx.save(); ctx.translate(cx, Math.round(cy)); if (p > 0) ctx.rotate(p * p * 16);
+    let dx = 0, dy = 0, rot = 0, s = ds0;
+    if (p < 0) { dy = Math.sin(O.t * 1.8) * 1.5; rot = Math.sin(O.t * 1.3) * 0.08; }
+    else if (p < 0.35) { // slosh side to side, harder and harder
+      const q = p / 0.35; dx = Math.sin(O.t * 16) * bowlR * 0.45 * q; dy = -Math.abs(Math.cos(O.t * 16)) * k * 1.2 * q; rot = Math.sin(O.t * 16) * 0.5 * q;
+    } else { // circle the bowl, spinning and shrinking, then gone
+      const q = (p - 0.35) / 0.65, a = O.t * (8 + q * 18);
+      dx = Math.cos(a) * bowlR * 0.5 * (1 - q); dy = Math.sin(a) * bowlR * 0.14 * (1 - q) + q * k * 2;
+      rot = q * q * 22; s = ds0 * (1 - Math.pow(q, 1.4) * 0.9);
+    }
+    const cy = rimY + 2 - ds.h * ds0 / 2 + dy;
+    ctx.save(); ctx.translate(Math.round(cx + dx), Math.round(cy)); ctx.rotate(rot);
     ctx.drawImage(ds.c, Math.round(-ds.w * s / 2), Math.round(-ds.h * s / 2), Math.round(ds.w * s), Math.round(ds.h * s)); ctx.restore();
     ctx.drawImage(bs.c, 0, 7, bs.w, bs.h - 7, bx, ty + 7 * k, bs.w * k, (bs.h - 7) * k); // bowl front hides the duck's bottom
   }
@@ -1085,7 +1101,7 @@
       }
     }
     // the Brainrot Core: a glowing neon pool with sludge creatures bubbling up
-    if (yFloor < O.H + 60) {
+    if (yFloor < O.H + 60 && !O.endless) {
       ctx.fillStyle = '#12030f'; ctx.fillRect(0, Math.round(yFloor), O.W, O.H);
       for (let x = 0; x < O.W; x += 2) { const w = Math.sin(x * 0.08 + O.t * 2) * 2; ctx.fillStyle = (x >> 3) % 2 ? '#ff3fb4' : '#7dff6a'; ctx.fillRect(x, Math.round(yFloor + w), 2, 2); }
       for (let i = 0; i < 5; i++) {
@@ -1183,7 +1199,9 @@
     const tm = O.view === 'game' || O.view === 'intro' ? 0 : 1;
     O.tmix = O.reduced ? tm : O.tmix + (tm - O.tmix) * (1 - Math.exp(-dt * 2.2));
     const ctx = O.ctx; const ySurf = (0 - O.topM) * O.ppm;
-    ctx.clearRect(0, 0, O.W, O.H);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, O.W, O.H);
+    const fp = O.view === 'intro' && !O.reduced ? flushP() : -1;
+    if (fp > 0.15 && fp < 1) { const a = Math.sin(fp * Math.PI) * 1.6; ctx.setTransform(1, 0, 0, 1, Math.round((Math.random() - 0.5) * 2 * a), Math.round((Math.random() - 0.5) * 2 * a)); }
     drawSky(ctx, 0, ySurf);
     // dusk over the sky on the results screen
     O.dusk = (O.dusk || 0) + ((O.view === 'results' ? 1 : 0) - (O.dusk || 0)) * (O.reduced ? 1 : 1 - Math.exp(-dt * 2));
@@ -1214,10 +1232,11 @@
     },
     setView(v, instant) { O.view = v; O.showShrimp = v === 'game' || v === 'intro'; if (instant) O.topM = viewTop(); },
     setReduced(r) { O.reduced = !!r; },
+    setEndless(v) { O.endless = !!v; },
     // first prompt: flush the duck down the toilet, then drop it into the water under the toilet
     flush() {
       O.flushT0 = performance.now(); O.flushDropped = false;
-      O.sxTarget = 0.17; O.sxf = 0.17;
+      const f = ((O.toiletCX || O.W * 0.2) - 8) / O.W; O.sxTarget = f; O.sxf = f;
       O.shrimpM = -OFF + 6; O.tweenDur = 0; O.sinking = false;
     },
     setDepth(m, opts = {}) {

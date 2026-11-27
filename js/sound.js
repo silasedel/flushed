@@ -52,9 +52,9 @@
     miss() { [392, 330, 262].forEach((f, i) => tone(f, 0.16, { at: i * 0.1, vol: 0.12, type: 'triangle' })); },
     descend(ms) { noise(Math.max(0.5, ms / 1000), { vol: 0.08, freq: 900, sweep: -800, q: 0.7 }); for (let i = 0; i < 6; i++) tone(700 + Math.random() * 900, 0.04, { at: Math.random() * (ms / 1000), vol: 0.05, type: 'sine', slide: 300 }); },
     flush() { // toilet flush: a rushing swirl, a gurgle, then the drop
-      noise(1.5, { vol: 0.16, freq: 1400, sweep: -1100, q: 0.9 });
+      noise(2.1, { vol: 0.18, freq: 1500, sweep: -1200, q: 0.9 });
       for (let i = 0; i < 9; i++) tone(260 + Math.random() * 380, 0.06, { at: 0.35 + i * 0.11, vol: 0.06, type: 'sine', slide: -160 });
-      tone(180, 0.35, { at: 1.45, vol: 0.12, type: 'triangle', slide: -120 });
+      tone(180, 0.35, { at: 2.0, vol: 0.12, type: 'triangle', slide: -120 });
     },
     finish() { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.18, { at: i * 0.11, vol: 0.14 })); },
     startAmbience() {

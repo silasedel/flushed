@@ -11,6 +11,13 @@
   const ICON_SPR = { plankton: ['icoNPC'], clever: ['icoMid'], schooler: ['icoMid'], rare: ['icoRizz'], deep: ['icoSkibidi'], million: ['icoSigma'] };
   ICON_SPR.none = ['silhouette', '#4a5b72'];
   const READ_MS = 3000, ANSWER_MS = 25000, PER_GAME = 7, MAX_SCORE = 700;
+  // Game length: 5, 7, 10 prompts, or 0 = endless (keeps going until you end the run).
+  const LENGTHS = [5, 7, 10, 0];
+  const lenOf = g => (g && g.len !== undefined ? g.len : PER_GAME);
+  const countOf = e => e.results.length;
+  // Depth per answer scales so any length spans the same 0–7,000 m world (endless paces like a 10).
+  const depthScale = len => 7 / (len || 10);
+  const lenName = l => (l ? `${l} PROMPTS` : 'ENDLESS');
   const EPOCH = '2026-09-01'; // Daily Dive #1
   const PACKS = [
     { key: 'geography', name: 'Geography', blurb: 'Countries, capitals, rivers, peaks and every corner of the map.' },
@@ -98,13 +105,14 @@
     let k = 0; while (picks.length < PER_GAME && k < QS.length) { const q = QS[(d * 7 + k++) % QS.length]; if (!picks.includes(q) && casualOK(q)) picks.push(q); }
     return picks.map(q => q.id);
   }
-  function randomIds(pack) {
-    const recent = new Set(store.recent);
-    let pool = QS.filter(q => !pack || q.pack === pack);
+  function randomIds(pack, n = PER_GAME, exclude = []) {
+    const recent = new Set(store.recent); const ex = new Set(exclude);
+    let pool = QS.filter(q => (!pack || q.pack === pack) && !ex.has(q.id));
+    if (pool.length < n) pool = QS.filter(q => !pack || q.pack === pack);
     let fresh = pool.filter(q => !recent.has(q.id));
-    if (fresh.length < PER_GAME * 4) { // most seen: prefer the least recently played
+    if (fresh.length < n * 4) { // most seen: prefer the least recently played
       const pos = new Map(store.recent.map((id, i) => [id, i]));
-      fresh = pool.slice().sort((a, b) => (pos.get(a.id) ?? -1) - (pos.get(b.id) ?? -1)).slice(0, Math.max(PER_GAME * 12, 60));
+      fresh = pool.slice().sort((a, b) => (pos.get(a.id) ?? -1) - (pos.get(b.id) ?? -1)).slice(0, Math.max(n * 12, 60));
     }
     const sh = shuffle(fresh); const picks = [];
     if (pack) {
@@ -112,20 +120,20 @@
     } else {
       const allowVague = Math.random() < 1 / 3; // "Name something that…" only in about a third of dives
       const ok = x => casualOK(x) && !picks.includes(x) && !(isVague(x) && (!allowVague || picks.some(isVague)));
-      for (let tries = 0; picks.length < PER_GAME && tries < 60; tries++) {
+      for (let tries = 0; picks.length < n && tries < 60; tries++) {
         const ent = picks.filter(q => ENTERTAINMENT.includes(q.pack)).length;
         const p = pickPack(Math.random, new Set(ent >= 2 ? ENTERTAINMENT : []));
         const q = sh.find(x => x.pack === p && ok(x)); if (q) picks.push(q);
       }
-      for (const q of sh) { if (picks.length >= PER_GAME) break; if (ok(q)) picks.push(q); }
+      for (const q of sh) { if (picks.length >= n) break; if (ok(q)) picks.push(q); }
     }
-    for (const q of sh) { if (picks.length >= PER_GAME) break; if (!picks.includes(q)) picks.push(q); }
+    for (const q of sh) { if (picks.length >= n) break; if (!picks.includes(q)) picks.push(q); }
     return shuffle(picks).map(q => q.id);
   }
 
   // ---------- persistence ----------
   const SKEY = 'flushed.v1';
-  const DEFAULTS = () => ({ v: 1, settings: { sound: true, volume: 0.5, ambience: true, motion: 'full', showMeta: true }, daily: {}, archive: {}, history: [], recent: [], active: null, tiers: {}, seenHelp: false });
+  const DEFAULTS = () => ({ v: 1, settings: { sound: true, volume: 0.5, ambience: true, motion: 'full', showMeta: true, len: 10 }, daily: {}, archive: {}, history: [], recent: [], active: null, tiers: {}, seenHelp: false });
   let store = DEFAULTS();
   function load() {
     try { const raw = localStorage.getItem(SKEY); if (raw) { const s = JSON.parse(raw); store = Object.assign(DEFAULTS(), s); store.settings = Object.assign(DEFAULTS().settings, s.settings || {}); } } catch (e) { /* private mode */ }
@@ -137,8 +145,9 @@
   let tickTimer = null, lastTickSec = -1;
 
   function newGame(mode, key) {
-    const ids = mode === 'daily' || mode === 'archive' ? dailyIds(key) : randomIds(mode === 'pack' ? key : null);
-    return { mode, key, ids, idx: 0, results: [], score: 0, depth: 0, phase: 'answering', phaseEnd: Date.now() + ANSWER_MS, input: '', tries: [], startedAt: Date.now() };
+    const len = mode === 'daily' || mode === 'archive' ? PER_GAME : (LENGTHS.includes(store.settings.len) ? store.settings.len : 10);
+    const ids = mode === 'daily' || mode === 'archive' ? dailyIds(key) : randomIds(mode === 'pack' ? key : null, len || 10);
+    return { mode, key, ids, len, idx: 0, results: [], score: 0, depth: 0, phase: 'answering', phaseEnd: Date.now() + ANSWER_MS, input: '', tries: [], startedAt: Date.now() };
   }
   const curQ = () => BY_ID.get(G.ids[G.idx]);
 
@@ -157,7 +166,7 @@
     beginQuestion(0, true);
   }
 
-  const INTRO_MS = 2500;
+  const INTRO_MS = 3000;
   function beginQuestion(i, fresh) {
     G.idx = i; G.input = ''; G.tries = [];
     if (fresh) { // first prompt: the duck gets flushed down the toilet before the clock starts
@@ -227,7 +236,7 @@
     const t = tierOf(ans.score);
     // display: what the player typed when it was a longer phrase containing a valid answer
     G.results[G.idx] = { id: G.ids[G.idx], answer: display || ans.name, matched: ans.name, input, score: ans.score, tries: G.tries.slice() };
-    G.sinkFrom = G.depth; G.score += ans.score; G.depth += t.depth;
+    G.sinkFrom = G.depth; G.score += ans.score; G.depth += Math.round(t.depth * depthScale(lenOf(G)));
     store.tiers[ans.score] = (store.tiers[ans.score] || 0) + 1;
     Sound.correct(ans.score);
     sink();
@@ -252,11 +261,17 @@
   function next() {
     if (!G || G.phase !== 'reveal') return;
     Sound.click();
-    if (G.idx < PER_GAME - 1) beginQuestion(G.idx + 1); else finish();
+    const L = lenOf(G);
+    if (!L) { // endless: top up the queue so it never runs out
+      if (G.idx >= G.ids.length - 2) G.ids.push(...randomIds(G.mode === 'pack' ? G.key : null, 10, G.ids));
+      return beginQuestion(G.idx + 1);
+    }
+    if (G.idx < L - 1) beginQuestion(G.idx + 1); else finish();
   }
 
   function finish(silent) {
-    const entry = { mode: G.mode, key: G.key, ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
+    if (!lenOf(G)) G.ids = G.ids.slice(0, Math.max(1, G.results.length)); // endless: only the prompts actually played
+    const entry = { mode: G.mode, key: G.key, len: lenOf(G), ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
     if (G.mode === 'daily') { entry.dayNo = dayIndex(G.key) + 1; store.daily[G.key] = entry; }
     if (G.mode === 'archive') { const a = store.archive[G.key] || { best: 0, plays: 0 }; a.plays++; a.best = Math.max(a.best, entry.score); store.archive[G.key] = a; entry.dayNo = dayIndex(G.key) + 1; }
     store.history.push(entry); if (store.history.length > 400) store.history.splice(0, store.history.length - 400);
@@ -281,6 +296,7 @@
     if (G.mode === 'daily') return confirmBox(DAILY_LEAVE, () => { abandon(true); fn(); });
     const answered = G.results.filter(Boolean).length;
     if (!answered) { discardDive(); return fn(); }
+    if (!lenOf(G)) return confirmBox('End this endless run? Your score so far is saved.', () => abandon());
     confirmBox('Quit this flush? Its progress will be thrown away.', () => { discardDive(); fn(); });
   }
   function quitDive() { Sound.click(); leaveThen(showTitle); }
@@ -291,7 +307,7 @@
     const { mode, key } = G;
     const go = () => { discardDive(); startGame(mode, key); };
     if (!G.results.filter(Boolean).length) return go();
-    confirmBox('Restart with 7 fresh prompts? This flush will be thrown away.', go);
+    confirmBox(`Restart with fresh prompts (${lenName(lenOf(G)).toLowerCase()})? This flush will be thrown away.`, go);
   }
 
   // ---------- rendering: screens ----------
@@ -308,7 +324,11 @@
   }
   function updateTitle() {
     const k = todayKey(); const done = store.daily[k];
-    $('#begin-label').textContent = G ? 'KEEP FLUSHING' : done ? "TODAY'S FLUSH LOG" : 'FLUSH';
+    $('#begin-label').textContent = G ? 'KEEP FLUSHING' : 'FLUSH';
+    renderLenPick();
+    const all = store.history; const best = Math.max(0, ...all.map(h => h.score));
+    $('#daily-note').innerHTML = all.length ? `PLAYED <b>${all.length}</b> · BEST <b>${best}</b>` : '';
+    return;
     const streak = streaks().current;
     $('#daily-note').innerHTML = done
       ? `FLUSH #${dayIndex(k) + 1} · <b>${done.score}</b> PTS · NEXT <b class="cd">${hms(msToMidnight())}</b>`
@@ -316,7 +336,7 @@
   }
 
   function showGame(fromTitle) {
-    show('game'); Ocean.setView('game');
+    show('game'); Ocean.setView('game'); Ocean.setEndless(!lenOf(G));
     Ocean.setDepth(G.depth, { instant: true });
     buildGauge(); renderHud(); renderQuestion(true);
   }
@@ -326,8 +346,10 @@
     const d = depthOverride ?? G.depth;
     $('#depth-val').textContent = fmt(Math.max(0, d));
     $('#score-val').textContent = G.score;
-    const pips = $('#pips'); pips.innerHTML = ''; pips.dataset.label = `PROMPT ${G.idx + 1} OF ${PER_GAME}`;
-    for (let i = 0; i < PER_GAME; i++) {
+    const L = lenOf(G);
+    const pips = $('#pips'); pips.innerHTML = ''; pips.dataset.label = promptLabel();
+    const from = L ? 0 : Math.max(0, G.idx - 8), to = L ? L : from + 10; // endless: a rolling window of 10
+    for (let i = from; i < to; i++) {
       const r = G.results[i]; const el = document.createElement('span'); el.className = 'pip';
       if (r) { if (r.score) { el.classList.add('done'); el.style.setProperty('--c', tierOf(r.score).color); } else el.classList.add('miss'); }
       else if (i === G.idx) el.classList.add('cur');
@@ -335,9 +357,10 @@
     }
   }
 
+  function promptLabel() { const L = lenOf(G); return L ? `PROMPT ${G.idx + 1} OF ${L}` : `PROMPT ${G.idx + 1} · ENDLESS`; }
   function renderQuestion(restoring) {
     const q = curQ(); if (!q) return;
-    $('#prompt-no').textContent = `PROMPT ${G.idx + 1} OF ${PER_GAME}`;
+    $('#prompt-no').textContent = promptLabel();
     $('#q-meta').textContent = store.settings.showMeta ? `${q.cat} · ${q.diff}`.toUpperCase() : '';
     $('#q-text').textContent = q.q;
     $('#answer').value = G.phase === 'answering' ? (G.input || '') : '';
@@ -372,7 +395,7 @@
       rev.style.setProperty('--tc', t.color);
       $('#tier-name').textContent = t.name.toUpperCase();
       $('#reveal-answer').textContent = `“${r.answer}”`;
-      $('#reveal-pts').innerHTML = `<span class="pts">+${r.score} PTS</span> <span class="dot">·</span> flush ${fmt(t.depth)}m`;
+      $('#reveal-pts').innerHTML = `<span class="pts">+${r.score} PTS</span> <span class="dot">·</span> flush ${fmt(Math.round(t.depth * depthScale(lenOf(G))))}m`;
       $('#reveal-blurb').textContent = t.blurb;
     } else {
       rev.style.setProperty('--tc', '#8aa0b8');
@@ -381,10 +404,12 @@
       $('#reveal-pts').innerHTML = `<span class="pts">+0 PTS</span> <span class="dot">·</span> stuck in the bowl`;
       $('#reveal-blurb').textContent = r.reason === 'skip' ? 'Skipped. Every answer is in the flush log at the end.' : 'Nothing went down this time.';
     }
-    $('#btn-descend').innerHTML = G.idx < PER_GAME - 1 ? 'KEEP FLUSHING <span class="tri">▼</span>' : 'RESURFACE <span class="tri">▲</span>';
+    const L = lenOf(G), last = L && G.idx >= L - 1;
+    $('#btn-descend').innerHTML = !last ? 'KEEP FLUSHING <span class="tri">▼</span>' : 'RESURFACE <span class="tri">▲</span>';
+    $('#btn-endrun').hidden = !!L;
     drawTierIcon(t ? t.key : null);
     document.body.classList.remove('intro');
-    renderHud(); if (G.idx === PER_GAME - 1) $('#pips').dataset.label = 'FLUSH COMPLETE';
+    renderHud(); if (last) $('#pips').dataset.label = 'FLUSH COMPLETE';
     $('#btn-descend').disabled = false;
     setTimeout(() => $('#btn-descend').focus({ preventScroll: true }), 30);
   }
@@ -517,16 +542,18 @@
     $('#screen-results').scrollTop = 0;
     const modeLabel = entry.mode === 'daily' ? `FLUSH #${entry.dayNo} COMPLETE`
       : entry.mode === 'archive' ? `ARCHIVE FLUSH #${entry.dayNo} COMPLETE`
-      : entry.mode === 'pack' ? `${(PACKS.find(p => p.key === entry.key) || {}).name || entry.key} PACK COMPLETE`.toUpperCase() : 'UNLIMITED FLUSH COMPLETE';
+      : entry.mode === 'pack' ? `${(PACKS.find(p => p.key === entry.key) || {}).name || entry.key} PACK COMPLETE`.toUpperCase() : entry.len === 0 ? `ENDLESS RUN · ${countOf(entry)} PROMPTS` : `${countOf(entry)}-PROMPT FLUSH COMPLETE`;
     $('#res-mode').textContent = modeLabel;
     countUp($('#res-score'), entry.score, fresh ? 900 : 0);
     $('#res-depth').textContent = `-${fmt(entry.depth)}m`;
     $('#res-zone').textContent = entry.depth ? `Reached the ${Ocean.ZONES[Ocean.zoneIndex(entry.depth)].name}` : 'Never left the bowl';
     drawDiveChart(entry);
     // bearing
-    $('#bearing').innerHTML = BEARING.map(b => {
-      const on = entry.score >= b.min && entry.score <= b.max;
-      return `<li class="${on ? 'on' : ''}">${iconImg(b.tier)}<span class="b-range" style="color:${TIER_COLOR[b.tier]}">${b.label}</span><span class="b-text">${b.text}</span></li>`;
+    const n = countOf(entry), sc = n / 7, norm = entry.score / sc; // bands are written for 7 prompts
+    $('#bearing').innerHTML = BEARING.map((b, i) => {
+      const on = norm >= b.min && (norm <= b.max || i === BEARING.length - 1) && (i === BEARING.length - 1 || norm < BEARING[i + 1].min);
+      const label = i === BEARING.length - 1 ? `${Math.round(b.min * sc)}+` : `${Math.round(b.min * sc)}–${Math.round((BEARING[i + 1].min) * sc) - 1}`;
+      return `<li class="${on ? 'on' : ''}">${iconImg(b.tier)}<span class="b-range" style="color:${TIER_COLOR[b.tier]}">${label}</span><span class="b-text">${b.text}</span></li>`;
     }).join('');
     // logbook
     const st = streaks(); const all = store.history;
@@ -540,19 +567,21 @@
       const t = r.score ? tierOf(r.score) : null;
       const col = t ? t.color : '#4f6079';
       const ans = r.answer ? esc(r.answer) : r.input ? `"${esc(r.input)}"` : (r.reason === 'skip' ? 'skipped' : '—');
-      const sub = t ? `<span style="color:${t.color}">${t.name}</span> · flushed ${fmt(t.depth)}m` : (r.reason === 'skip' ? 'Skipped' : r.reason === 'surfaced' ? 'Pulled out early' : "Time's up") + ' · nothing flushed';
+      const sub = t ? `<span style="color:${t.color}">${t.name}</span> · flushed ${fmt(Math.round(t.depth * depthScale(lenOf(entry))))}m` : (r.reason === 'skip' ? 'Skipped' : r.reason === 'surfaced' ? 'Pulled out early' : "Time's up") + ' · nothing flushed';
       const li = document.createElement('li'); li.className = 'catch-row';
       li.innerHTML = `<button class="catch-head" aria-expanded="false"><span class="c-n">${i + 1}</span><span class="c-icon">${iconImg(t ? t.key : 'none')}</span><span class="c-body"><span class="c-q">${esc(q.q.replace(/\.$/, ''))}</span><span class="c-a${r.answer ? '' : ' miss'}">${ans}</span><span class="c-sub">${sub}</span></span><span class="c-p" style="color:${col}">${r.score}</span><span class="c-plus">+</span></button><div class="log-more" hidden></div>`;
       li.querySelector('.catch-head').addEventListener('click', () => toggleLog(li, q, r));
       list.appendChild(li);
     });
-    $('#btn-again').textContent = entry.mode === 'pack' ? 'PLAY PACK AGAIN' : entry.mode === 'daily' ? 'PLAY UNLIMITED' : 'PLAY AGAIN';
+    $('#btn-again').innerHTML = `<span class="tri">▼</span>${entry.mode === 'pack' ? 'PLAY PACK AGAIN' : 'PLAY AGAIN'}<span class="tri">▼</span>`;
+    renderLenPick();
     updateCountdown();
     setTimeout(() => $('#btn-share').focus({ preventScroll: true }), 60);
   }
   function drawDiveChart(entry) {
     const W = 480, H = 270, L = 34, R = 14, T = 14, B = 30;
-    const x = i => L + (i + 0.5) * ((W - L - R) / PER_GAME);
+    const n = Math.max(1, entry.results.length); const slot = (W - L - R) / n;
+    const x = i => L + (i + 0.5) * slot;
     const y = p => T + (p / 100) * (H - T - B);
     let svg = '';
     for (const p of [0, 25, 50, 75, 100]) {
@@ -560,12 +589,12 @@
     }
     entry.results.forEach((r, i) => {
       const t = r.score ? tierOf(r.score) : null; const cx = x(i);
-      svg += `<text x="${cx}" y="${H - 8}" class="ax" text-anchor="middle">${i + 1}</text>`;
+      if (n <= 12 || (i + 1) % 5 === 0 || i === 0) svg += `<text x="${cx}" y="${H - 8}" class="ax" text-anchor="middle">${i + 1}</text>`;
       if (!t) { svg += `<circle cx="${cx}" cy="${y(0)}" r="4" class="nocatch"/>`; return; }
       const cy = y(r.score);
       svg += `<line x1="${cx}" x2="${cx}" y1="${y(0)}" y2="${cy}" stroke="${t.color}" class="drop" style="--len:${cy - y(0)}"/>`;
-      const s = Ocean.sprite(ICON_SPR[t.key][0], ICON_SPR[t.key][1] || undefined); const k = Math.max(1, Math.round(32 / s.w));
-      svg += `<image href="${iconURL(t.key)}" x="${cx - s.w * k / 2}" y="${cy - s.h * k / 2}" width="${s.w * k}" height="${s.h * k}" class="pix-svg"/>`;
+      const s = Ocean.sprite(ICON_SPR[t.key][0], ICON_SPR[t.key][1] || undefined); const sz = Math.min(32, Math.max(10, slot - 2));
+      svg += `<image href="${iconURL(t.key)}" x="${cx - sz / 2}" y="${cy - sz / 2}" width="${sz}" height="${sz}" class="pix-svg"/>`;
     });
     $('#dive-chart').innerHTML = svg;
   }
@@ -608,8 +637,9 @@
 
   function shareText(e) {
     const sq = { 0: '⬛', 10: '⬜', 15: '⬜', 30: '🟦', 60: '🟥', 85: '🟪', 100: '🟨' };
-    const head = e.mode === 'daily' || e.mode === 'archive' ? `FLUSHED #${e.dayNo}${e.mode === 'archive' ? ' (archive)' : ''}` : e.mode === 'pack' ? `FLUSHED · ${(PACKS.find(p => p.key === e.key) || {}).name} pack` : 'FLUSHED · Unlimited';
-    return `${head} 🦆\n${e.score}/700 · -${fmt(e.depth)}m\n${e.results.map(r => sq[r.score] || '⬛').join('')}`;
+    const head = e.mode === 'daily' || e.mode === 'archive' ? `FLUSHED #${e.dayNo}${e.mode === 'archive' ? ' (archive)' : ''}` : e.mode === 'pack' ? `FLUSHED · ${(PACKS.find(p => p.key === e.key) || {}).name} pack` : e.len === 0 ? 'FLUSHED · Endless' : `FLUSHED · ${countOf(e)} prompts`;
+    const n = countOf(e); const tail = e.len === 0 ? `${e.score} pts in ${n} prompts` : `${e.score}/${n * 100}`;
+    return `${head} 🦆\n${tail} · -${fmt(e.depth)}m\n${e.results.map(r => sq[r.score] || '⬛').join('')}`;
   }
   async function copyShare() {
     if (!resultsEntry) return;
@@ -698,12 +728,12 @@
   function openHelp() {
     openModal('HOW TO PLAY', `
       <p>Every prompt has dozens of right answers. Everyone can name the obvious ones — the goal is to name the <b>rarest</b> answer you can.</p>
-      <ul class="rules"><li><b>7 prompts</b> per flush. You have <b>25 seconds</b> each.</li>
+      <ul class="rules"><li>Pick <b>5, 7 or 10 prompts</b>, or <b>endless</b>. You have <b>25 seconds</b> each.</li>
       <li>Wrong answers cost nothing — keep guessing until the timer runs out. Whatever is in the box when time expires is submitted.</li>
       <li>Rarer answers score more and flush your duck deeper. A perfect flush reaches <b>7,000m</b>.</li></ul>
       <table class="tier-table">${TIERS.slice().reverse().map(t => `<tr><td style="color:${t.color}">${t.name}</td><td>+${t.score}</td><td>${fmt(t.depth)}m</td></tr>`).join('')}</table>
       <p class="fine">Rarity tiers are our curated estimate of how likely a typical person is to think of each answer — not live player data.</p>
-      <p class="fine"><b>Daily Flush</b>: the same 7 prompts for everyone, one scored attempt a day. <b>Unlimited</b> and <b>Themed Packs</b>: play as much as you like. <b>Archive</b>: replay past dailies.</p>
+      <p class="fine"><b>Endless</b> never stops: hit <b>END RUN</b> on any reveal to cash out. <b>Themed Packs</b> keep every prompt on one topic.</p>
       <button class="btn btn-wide" data-close>GOT IT</button>`);
   }
 
@@ -801,7 +831,7 @@
   function menuAction(act) {
     closeMenu();
     if (act === 'home') return leaveThen(showTitle);
-    if (act === 'daily') return G && G.mode === 'daily' ? showGame() : leaveThen(() => startGame('daily'));
+    if (act === 'daily') return leaveThen(() => startGame('unlimited'));
     if (act === 'unlimited') return leaveThen(() => startGame('unlimited'));
     if (act === 'packs') return leaveThen(showPacks);
     if (act === 'archive') return leaveThen(showArchive);
@@ -812,9 +842,13 @@
     if (act === 'help') return openHelp();
   }
 
+  function renderLenPick() {
+    const cur = LENGTHS.includes(store.settings.len) ? store.settings.len : 10;
+    $$('[data-len]').forEach(b => { const on = Number(b.dataset.len) === cur; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+  }
   function updateCountdown() {
     const s = hms(msToMidnight());
-    $$('.cd').forEach(e => e.textContent = s); $('#st-next').textContent = s;
+    $$('.cd').forEach(e => e.textContent = s); if ($('#st-next')) $('#st-next').textContent = s;
     // roll over at midnight
     if (document.body.dataset.screen === 'title') { const k = todayKey(); if (k !== updateCountdown.k) { updateCountdown.k = k; updateTitle(); } }
   }
@@ -823,7 +857,9 @@
   function wire() {
     $('#howto-tiers').innerHTML = TIERS.slice().reverse().map(t => `<span style="color:${t.color}">${t.name} +${t.score}</span>`).join('');
     $('#howto-toggle').addEventListener('click', e => { const box = $('#howto'); box.hidden = !box.hidden; e.currentTarget.setAttribute('aria-expanded', String(!box.hidden)); Sound.click(); });
-    $('#btn-begin').addEventListener('click', () => { Sound.click(); if (G) showGame(); else startGame('daily'); });
+    $('#btn-begin').addEventListener('click', () => { Sound.click(); if (G) showGame(); else startGame('unlimited'); });
+    $$('[data-len]').forEach(b => b.addEventListener('click', () => { Sound.click(); store.settings.len = Number(b.dataset.len); save(); renderLenPick(); }));
+    $('#btn-endrun').addEventListener('click', () => { if (G && G.phase === 'reveal') { Sound.click(); finish(); } });
     $$('[data-go]').forEach(b => b.addEventListener('click', () => {
       Sound.click(); const g = b.dataset.go;
       if (g === 'archive') showArchive(); else if (g === 'packs') showPacks(); else if (g === 'unlimited') startGame('unlimited'); else showTitle();
@@ -836,6 +872,8 @@
     $('#btn-again').addEventListener('click', () => { const e = resultsEntry; if (e && e.mode === 'pack') startGame('pack', e.key); else startGame('unlimited'); });
     $('#btn-res-archive').addEventListener('click', () => { Sound.click(); showArchive(); });
     $('#btn-stats2').addEventListener('click', openStats);
+    $('#btn-stats-title').addEventListener('click', () => { Sound.click(); openStats(); });
+    $('#btn-res-packs').addEventListener('click', () => { Sound.click(); showPacks(); });
     $('#btn-share').addEventListener('click', copyShare);
     $('#btn-share2').addEventListener('click', async () => { if (navigator.share && resultsEntry) { try { await navigator.share({ text: shareText(resultsEntry) }); return; } catch (e) { if (e.name === 'AbortError') return; } } copyShare(); });
     $('#btn-quit').addEventListener('click', quitDive);

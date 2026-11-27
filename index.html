@@ -51,22 +51,22 @@
   <section class="screen" id="screen-title" aria-label="Title">
     <div class="title-top">
       <h1 class="logo"><span class="logo-word">FLUSHED</span></h1>
-      <p class="tagline">THE DAILY FLUSH</p>
-      <p class="subline">7 prompts · 25 seconds each · rarer answers flush you deeper</p>
+      <p class="tagline">GET FLUSHED</p>
+      <p class="subline">25 seconds a prompt · rarer answers flush you deeper</p>
     </div>
     <div class="title-bottom">
       <button class="howto-toggle" id="howto-toggle" aria-expanded="false" aria-controls="howto"><span class="caret">▸</span> HOW TO PLAY</button>
       <div class="howto" id="howto" hidden>
-        <p>Every prompt has dozens of right answers. Name the <b>rarest</b> one you can. You get a 3-second read, then 25 seconds. Wrong guesses are free, so keep trying until time runs out.</p>
+        <p>Every prompt has dozens of right answers. Name the <b>rarest</b> one you can. You get 25 seconds per prompt. Pick 5, 7, 10 prompts or endless. Wrong guesses are free, so keep trying until time runs out.</p>
         <p class="howto-tiers" id="howto-tiers"></p>
       </div>
       <button class="btn-begin" id="btn-begin"><span class="tri">▼</span><span id="begin-label">FLUSH</span><span class="tri">▼</span></button>
       <nav class="title-bar">
-        <span class="daily-note" id="daily-note"></span>
-        <button class="tab-btn" data-go="archive">ARCHIVE <svg class="ico"><use href="#i-cal"/></svg></button>
+        <div class="len-pick" role="radiogroup" aria-label="Prompts per game"><span class="len-label">PROMPTS</span><button role="radio" data-len="5">5</button><button role="radio" data-len="7">7</button><button role="radio" data-len="10">10</button><button role="radio" data-len="0" aria-label="Endless">∞</button></div>
         <button class="tab-btn" data-go="packs">THEMED PACKS <svg class="ico"><use href="#i-cube"/></svg></button>
-        <button class="tab-btn" data-go="unlimited">UNLIMITED <svg class="ico ico-wide"><use href="#i-inf"/></svg></button>
+        <button class="tab-btn" id="btn-stats-title">STATS <svg class="ico"><use href="#i-chart"/></svg></button>
       </nav>
+      <p class="daily-note" id="daily-note"></p>
     </div>
   </section>
 
@@ -126,7 +126,7 @@
         <p class="reveal-pts" id="reveal-pts">+10 PTS · flush 30m</p>
         <p class="reveal-blurb" id="reveal-blurb"></p>
         </div>
-        <button class="btn btn-wide" id="btn-descend">KEEP FLUSHING</button>
+        <div class="rev-btns"><button class="btn btn-wide" id="btn-descend">KEEP FLUSHING</button><button class="btn btn-end" id="btn-endrun" hidden>END RUN ▲</button></div>
       </div>
     </div>
   </section>
@@ -173,14 +173,17 @@
       <ol class="catch" id="log-list"></ol>
 
       <h2 class="sec-h">LOGBOOK</h2>
-      <p class="logbook">STREAK <b id="st-streak">0</b> · PLAYED <b id="st-played">0</b> · AVG <b id="st-avg">0</b> · BEST <b id="st-best">0</b></p>
-      <p class="logbook small">NEXT DAILY FLUSH IN <b id="st-next">--:--:--</b></p>
+      <p class="logbook"><span hidden>STREAK <b id="st-streak">0</b> · </span>PLAYED <b id="st-played">0</b> · AVG <b id="st-avg">0</b> · BEST <b id="st-best">0</b></p>
 
+      <div class="again-row">
+        <button class="btn-begin btn-again" id="btn-again">PLAY AGAIN</button>
+        <div class="len-pick" role="radiogroup" aria-label="Prompts per game"><span class="len-label">PROMPTS</span><button role="radio" data-len="5">5</button><button role="radio" data-len="7">7</button><button role="radio" data-len="10">10</button><button role="radio" data-len="0" aria-label="Endless">∞</button></div>
+      </div>
       <nav class="res-nav">
-        <button class="tab-btn" id="btn-again">PLAY AGAIN</button>
-        <button class="tab-btn" id="btn-res-archive">ARCHIVE</button>
+        <button class="tab-btn" id="btn-res-packs">THEMED PACKS</button>
         <button class="tab-btn" id="btn-stats2">STATS</button>
         <button class="tab-btn" id="btn-res-home">HOME</button>
+        <button class="tab-btn" id="btn-res-archive" hidden>ARCHIVE</button>
       </nav>
     </div>
   </section>
@@ -209,15 +212,13 @@
     <nav class="drawer" aria-label="Menu">
       <div class="sheet-head"><h2>MENU</h2><button class="icon-btn" data-close aria-label="Close"><svg><use href="#i-close"/></svg></button></div>
       <button class="menu-item" data-act="home"><svg class="ico"><use href="#i-home"/></svg> HOME</button>
-      <button class="menu-item" data-act="daily"><svg class="ico"><use href="#i-play"/></svg> DAILY FLUSH</button>
-      <button class="menu-item" data-act="unlimited"><svg class="ico ico-wide"><use href="#i-inf"/></svg> UNLIMITED</button>
+      <button class="menu-item" data-act="unlimited"><svg class="ico"><use href="#i-play"/></svg> PLAY</button>
       <button class="menu-item" data-act="packs"><svg class="ico"><use href="#i-cube"/></svg> THEMED PACKS</button>
-      <button class="menu-item" data-act="archive"><svg class="ico"><use href="#i-cal"/></svg> ARCHIVE</button>
-      <button class="menu-item" data-act="stats"><svg class="ico"><use href="#i-chart"/></svg> STATISTICS</button>
+            <button class="menu-item" data-act="stats"><svg class="ico"><use href="#i-chart"/></svg> STATISTICS</button>
       <button class="menu-item" data-act="settings"><svg class="ico"><use href="#i-gear"/></svg> SETTINGS</button>
       <button class="menu-item" data-act="help"><svg class="ico"><use href="#i-help"/></svg> HOW TO PLAY</button>
-      <button class="menu-item danger" data-act="restart" id="menu-restart"><svg class="ico"><use href="#i-restart"/></svg> RESTART DIVE</button>
-      <button class="menu-item danger" data-act="quit" id="menu-quit"><svg class="ico"><use href="#i-close"/></svg> QUIT DIVE</button>
+      <button class="menu-item danger" data-act="restart" id="menu-restart"><svg class="ico"><use href="#i-restart"/></svg> RESTART FLUSH</button>
+      <button class="menu-item danger" data-act="quit" id="menu-quit"><svg class="ico"><use href="#i-close"/></svg> QUIT FLUSH</button>
       <p class="menu-foot" id="menu-foot"></p>
     </nav>
   </div>
