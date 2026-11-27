@@ -105,21 +105,28 @@
     let k = 0; while (picks.length < PER_GAME && k < QS.length) { const q = QS[(d * 7 + k++) % QS.length]; if (!picks.includes(q) && casualOK(q)) picks.push(q); }
     return picks.map(q => q.id);
   }
+  // No-repeat picking. Every prompt you're served gets stamped in store.seen with a running counter.
+  // Games only draw from prompts you've never seen; once those run low, the ones seen LONGEST ago come back first.
+  // Within a game, two prompts of the same kind ("Name a fruit" / "Name a fruit that's red") never appear together.
+  const kindOf = q => q.q.toLowerCase().replace(/^(name|give|list)\s+(a|an|any|one of the|one of|the|some)?\s*/, '').split(/[^a-z]+/)[0];
+  function markSeen(id) { store.seen = store.seen || {}; store.seenN = (store.seenN || 0) + 1; store.seen[id] = store.seenN; }
   function randomIds(pack, n = PER_GAME, exclude = []) {
-    const recent = new Set(store.recent); const ex = new Set(exclude);
-    let pool = QS.filter(q => (!pack || q.pack === pack) && !ex.has(q.id));
-    if (pool.length < n) pool = QS.filter(q => !pack || q.pack === pack);
-    let fresh = pool.filter(q => !recent.has(q.id));
-    if (fresh.length < n * 4) { // most seen: prefer the least recently played
-      const pos = new Map(store.recent.map((id, i) => [id, i]));
-      fresh = pool.slice().sort((a, b) => (pos.get(a.id) ?? -1) - (pos.get(b.id) ?? -1)).slice(0, Math.max(n * 12, 60));
+    const seen = store.seen || {}; const ex = new Set(exclude);
+    const fits = q => (pack ? q.pack === pack : casualOK(q));
+    let pool = QS.filter(q => fits(q) && !ex.has(q.id));
+    if (pool.length < n) pool = QS.filter(fits);
+    const unseen = pool.filter(q => seen[q.id] === undefined);
+    let fresh = unseen;
+    if (fresh.length < n * 3) { // nearly everything seen: top up with the ones seen longest ago
+      const old = pool.filter(q => seen[q.id] !== undefined).sort((a, b) => seen[a.id] - seen[b.id]);
+      fresh = unseen.concat(old.slice(0, Math.max(n * 6, 40)));
     }
     const sh = shuffle(fresh); const picks = [];
     if (pack) {
       for (const want of PACK_MIX) { for (const w of FALLBACK[want]) { const q = sh.find(x => x.diff === w && !picks.includes(x)); if (q) { picks.push(q); break; } } }
     } else {
       const allowVague = Math.random() < 1 / 3; // "Name something that…" only in about a third of dives
-      const ok = x => casualOK(x) && !picks.includes(x) && !(isVague(x) && (!allowVague || picks.some(isVague)));
+      const ok = x => casualOK(x) && !picks.includes(x) && !(kindOf(x) && picks.some(p => kindOf(p) === kindOf(x))) && !(isVague(x) && (!allowVague || picks.some(isVague)));
       for (let tries = 0; picks.length < n && tries < 60; tries++) {
         const ent = picks.filter(q => ENTERTAINMENT.includes(q.pack)).length;
         const p = pickPack(Math.random, new Set(ent >= 2 ? ENTERTAINMENT : []));
@@ -133,10 +140,13 @@
 
   // ---------- persistence ----------
   const SKEY = 'flushed.v1';
-  const DEFAULTS = () => ({ v: 1, settings: { sound: true, volume: 0.5, ambience: true, motion: 'full', showMeta: true, len: 10 }, daily: {}, archive: {}, history: [], recent: [], active: null, tiers: {}, seenHelp: false });
+  const DEFAULTS = () => ({ v: 1, settings: { sound: true, volume: 0.5, ambience: true, motion: 'full', showMeta: true, len: 10 }, daily: {}, archive: {}, history: [], recent: [], seen: {}, seenN: 0, active: null, tiers: {}, seenHelp: false });
   let store = DEFAULTS();
   function load() {
-    try { const raw = localStorage.getItem(SKEY); if (raw) { const s = JSON.parse(raw); store = Object.assign(DEFAULTS(), s); store.settings = Object.assign(DEFAULTS().settings, s.settings || {}); } } catch (e) { /* private mode */ }
+    try { const raw = localStorage.getItem(SKEY); if (raw) { const s = JSON.parse(raw); store = Object.assign(DEFAULTS(), s); store.settings = Object.assign(DEFAULTS().settings, s.settings || {}); }
+      if (!store.seenN) { // first run with no-repeat tracking: count everything already played as seen, oldest first
+        [...store.history.flatMap(h => h.ids || []), ...store.recent].forEach(id => { store.seenN++; store.seen[id] = store.seenN; });
+      } } catch (e) { /* private mode */ }
   }
   function save() { try { localStorage.setItem(SKEY, JSON.stringify(store)); } catch (e) {} }
 
@@ -168,7 +178,7 @@
 
   const INTRO_MS = 3000;
   function beginQuestion(i, fresh) {
-    G.idx = i; G.input = ''; G.tries = [];
+    G.idx = i; G.input = ''; G.tries = []; markSeen(G.ids[i]);
     if (fresh) { // first prompt: the duck gets flushed down the toilet before the clock starts
       G.phase = 'intro'; G.phaseEnd = Date.now() + INTRO_MS;
       Ocean.setView('intro', true); Ocean.flush(); Sound.flush();
