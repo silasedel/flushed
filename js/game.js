@@ -118,7 +118,7 @@
   // otherwise group by the thing being named ("fruit", "country"...).
   const FAMILY = window.KRILLION.family || {};
   const isFamous = q => /\b(famous|popular|well[- ]known|notable|celebrit\w*|iconic|legendary)\b/i.test(q.q);
-  const TEMPLATE = /\b(model|emoji|rhymes?|synonym|in spanish|in french|compound|starts? with|beginning with|starting with)s?\b/i; // repeated templates ("Name a Nissan model", "Name a weather emoji"): one per game
+  const TEMPLATE = /\b(model|emoji|rhymes?|synonym|in spanish|in french|compound|starts? with|beginning with|starting with|song by|team based in|in its title|in the title)s?\b/i; // repeated templates ("Name a Nissan model", "Name a weather emoji"): one per game
   const groupOf = q => (FAMILY[q.id] ? 'f' + FAMILY[q.id] : TEMPLATE.test(q.q) ? 't:' + TEMPLATE.exec(q.q)[1].toLowerCase().replace(/s$/, '').replace(/^(start|beginning|starting) with$|^starts with$/, 'letter') : 'k:' + kindOf(q));
   function randomIds(pack, n = PER_GAME, exclude = []) {
     const seen = store.seen || {}; const ex = new Set(exclude);
