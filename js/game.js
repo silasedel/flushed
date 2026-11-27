@@ -252,6 +252,8 @@
     const inp = $('#answer'); const val = inp.value.trim();
     if (!val) { shake(); return; }
     const n = window.Match.norm(val);
+    // secret cheat: 6996 = instant Sigma (the prompt's one-in-a-million answer)
+    if (val.replace(/\s/g, '') === '6996') { const sig = parseAnswers(curQ()).list.find(x => x.score === 100); if (sig) { clearSuggest(); return accept(sig, val, sig.name); } }
     // second Enter on a suggestion accepts it
     if (pendingSuggest && pendingSuggest.n === n) { const a = pendingSuggest.answer, typed = pendingSuggest.typed, lb = pendingSuggest.label; clearSuggest(); return accept(a, typed, lb !== a.name ? lb : undefined); }
     const m = window.Match.matchExact(curQ(), val);
