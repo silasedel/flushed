@@ -18,6 +18,16 @@
   // Depth per answer scales so any length spans the same 0–7,000 m world (endless paces like a 10).
   const depthScale = () => 1; // depth follows points in every game length: ~400 pts = Rat Kingdom, ~500 = disco core, 600+ = insanity
   const lenName = l => (l ? `${l} PROMPTS` : 'ENDLESS');
+  // ---------- Flush Coins ----------
+  // Normal games pay 1 coin per 10 points. Ranked: buy in at the "market price", get paid 1 coin per 5 points.
+  // The market price sits ~10% above what an average player wins back, so beating the average = profit, and the
+  // house keeps a small edge overall. (On Roblox this becomes the in-game currency; see ROBLOX.md, "Money".)
+  const START_COINS = 100, NORMAL_RATE = 10, RANKED_RATE = 5, HOUSE_EDGE = 1.1, AVG_PER_PROMPT = 25.45;
+  const rankedLen = () => (LENGTHS.includes(store.settings.len) && store.settings.len ? store.settings.len : 10);
+  const marketPrice = len => Math.ceil((AVG_PER_PROMPT * len / RANKED_RATE) * HOUSE_EDGE);
+  const coinsFor = (score, ranked) => Math.floor(score / (ranked ? RANKED_RATE : NORMAL_RATE));
+  let coinImg = '';
+  const coinTag = n => `<span class="coin">${coinImg ? `<img class="pix coin-ico" src="${coinImg}" alt="">` : ''}${n}</span>`;
   const EPOCH = '2026-09-01'; // Daily Dive #1
   const PACKS = [
     { key: 'geography', name: 'Geography', blurb: 'Countries, capitals, rivers, peaks and every corner of the map.' },
@@ -178,7 +188,7 @@
 
   // ---------- persistence ----------
   const SKEY = 'flushed.v1';
-  const DEFAULTS = () => ({ v: 1, settings: { sound: true, volume: 0.5, ambience: true, motion: 'full', showMeta: true, len: 10 }, daily: {}, archive: {}, history: [], recent: [], seen: {}, seenN: 0, active: null, tiers: {}, seenHelp: false });
+  const DEFAULTS = () => ({ v: 1, settings: { sound: true, volume: 0.5, ambience: true, motion: 'full', showMeta: true, len: 10 }, daily: {}, archive: {}, history: [], recent: [], seen: {}, seenN: 0, coins: START_COINS, active: null, tiers: {}, seenHelp: false });
   let store = DEFAULTS();
   function load() {
     try { const raw = localStorage.getItem(SKEY); if (raw) { const s = JSON.parse(raw); store = Object.assign(DEFAULTS(), s); store.settings = Object.assign(DEFAULTS().settings, s.settings || {}); }
@@ -193,9 +203,9 @@
   let tickTimer = null, lastTickSec = -1;
 
   function newGame(mode, key) {
-    const len = mode === 'daily' || mode === 'archive' ? PER_GAME : (LENGTHS.includes(store.settings.len) ? store.settings.len : 10);
+    const len = mode === 'ranked' ? rankedLen() : mode === 'daily' || mode === 'archive' ? PER_GAME : (LENGTHS.includes(store.settings.len) ? store.settings.len : 10);
     const ids = mode === 'daily' || mode === 'archive' ? dailyIds(key) : randomIds(mode === 'pack' ? key : null, len || 10);
-    return { mode, key, ids, len, idx: 0, results: [], score: 0, depth: 0, phase: 'answering', phaseEnd: Date.now() + ANSWER_MS, input: '', tries: [], startedAt: Date.now() };
+    return { mode, key, ids, len, ranked: mode === 'ranked' || undefined, price: mode === 'ranked' ? marketPrice(len) : undefined, idx: 0, results: [], score: 0, depth: 0, phase: 'answering', phaseEnd: Date.now() + ANSWER_MS, input: '', tries: [], startedAt: Date.now() };
   }
   const curQ = () => BY_ID.get(G.ids[G.idx]);
 
@@ -206,8 +216,13 @@
       key = todayKey();
       if (store.daily[key]) { return showResults(store.daily[key]); }
     }
+    if (mode === 'ranked') {
+      const price = marketPrice(rankedLen());
+      if ((store.coins ?? START_COINS) < price) { toast(`Ranked costs ${price} coins. Play normal games to earn more.`); return; }
+      store.coins = (store.coins ?? START_COINS) - price; Sound.click();
+    }
     G = newGame(mode, key);
-    store.active = G; save();
+    store.active = G; save(); renderCoins();
     Sound.start();
     Ocean.setDepth(0, { instant: true });
     showGame(true);
@@ -322,7 +337,10 @@
 
   function finish(silent) {
     if (!lenOf(G)) G.ids = G.ids.slice(0, Math.max(1, G.results.length)); // endless: only the prompts actually played
-    const entry = { cheated: G.results.some(r => r && r.cheat) || undefined, mode: G.mode, key: G.key, len: lenOf(G), ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
+    const cheated = G.results.some(r => r && r.cheat);
+    const earned = cheated ? 0 : coinsFor(G.score, G.ranked);
+    store.coins = (store.coins ?? START_COINS) + earned;
+    const entry = { coins: earned, ranked: G.ranked, price: G.price, cheated: cheated || undefined, mode: G.mode, key: G.key, len: lenOf(G), ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
     if (G.mode === 'daily') { entry.dayNo = dayIndex(G.key) + 1; store.daily[G.key] = entry; }
     if (G.mode === 'archive') { const a = store.archive[G.key] || { best: 0, plays: 0 }; a.plays++; a.best = Math.max(a.best, entry.score); store.archive[G.key] = a; entry.dayNo = dayIndex(G.key) + 1; }
     store.history.push(entry); if (store.history.length > 400) store.history.splice(0, store.history.length - 400);
@@ -348,6 +366,7 @@
     const answered = G.results.filter(Boolean).length;
     if (!answered) { discardDive(); return fn(); }
     if (!lenOf(G)) return confirmBox('End this endless run? Your score so far is saved.', () => abandon());
+    if (G.ranked) return confirmBox('End this ranked run now? You get paid for the points you have so far.', () => abandon());
     confirmBox('Quit this flush? Its progress will be thrown away.', () => { discardDive(); fn(); });
   }
   function quitDive() { Sound.click(); leaveThen(showTitle); }
@@ -355,6 +374,7 @@
     if (!G) return;
     Sound.click();
     if (G.mode === 'daily') return toast("The Daily Flush can't be restarted. It's one attempt per day.");
+    if (G.ranked) return toast("Ranked runs can't be restarted. Finish it to get paid.");
     const { mode, key } = G;
     const go = () => { discardDive(); startGame(mode, key); };
     if (!G.results.filter(Boolean).length) return go();
@@ -408,7 +428,7 @@
     }
   }
 
-  function promptLabel() { const L = lenOf(G); return L ? `PROMPT ${G.idx + 1} OF ${L}` : `PROMPT ${G.idx + 1} · ENDLESS`; }
+  function promptLabel() { const L = lenOf(G), r = G.ranked ? 'RANKED · ' : ''; return L ? `${r}PROMPT ${G.idx + 1} OF ${L}` : `PROMPT ${G.idx + 1} · ENDLESS`; }
   function renderQuestion(restoring) {
     const q = curQ(); if (!q) return;
     $('#prompt-no').textContent = promptLabel();
@@ -595,13 +615,18 @@
     $('#screen-results').scrollTop = 0;
     const modeLabel = entry.mode === 'daily' ? `FLUSH #${entry.dayNo} COMPLETE`
       : entry.mode === 'archive' ? `ARCHIVE FLUSH #${entry.dayNo} COMPLETE`
-      : entry.mode === 'pack' ? `${(PACKS.find(p => p.key === entry.key) || {}).name || entry.key} PACK COMPLETE`.toUpperCase() : entry.len === 0 ? `ENDLESS RUN · ${countOf(entry)} PROMPTS` : `${countOf(entry)}-PROMPT FLUSH COMPLETE`;
+      : entry.mode === 'pack' ? `${(PACKS.find(p => p.key === entry.key) || {}).name || entry.key} PACK COMPLETE`.toUpperCase() : entry.ranked ? `RANKED ${countOf(entry)}-PROMPT FLUSH` : entry.len === 0 ? `ENDLESS RUN · ${countOf(entry)} PROMPTS` : `${countOf(entry)}-PROMPT FLUSH COMPLETE`;
     $('#res-mode').textContent = modeLabel;
     countUp($('#res-score'), entry.score, fresh ? 900 : 0);
     $('#res-depth').textContent = `-${fmt(entry.depth)}m`;
     $('#res-zone').textContent = entry.depth ? `Reached the ${Ocean.ZONES[Ocean.zoneIndex(entry.depth)].name}` : 'Never left the bowl';
     drawDiveChart(entry);
     drawStack(entry);
+    const cl = $('#res-coins');
+    if (entry.cheated) cl.innerHTML = 'Cheat code used · no coins this time';
+    else if (entry.ranked) { const net = (entry.coins || 0) - (entry.price || 0); cl.innerHTML = `Bought in ${coinTag(entry.price)} · paid out ${coinTag(entry.coins || 0)} · <b class="${net >= 0 ? 'up' : 'down'}">${net >= 0 ? '+' : ''}${net} ${net >= 0 ? 'profit' : 'loss'}</b>`; }
+    else cl.innerHTML = `+${coinTag(entry.coins || 0)} earned`;
+    renderCoins();
     // bearing
     const n = countOf(entry), sc = n / 7, norm = entry.score / sc; // bands are written for 7 prompts
     $('#bearing').innerHTML = BEARING.map((b, i) => {
@@ -949,9 +974,16 @@
     if (act === 'help') return openHelp();
   }
 
+  function renderCoins() {
+    const c = store.coins ?? START_COINS, price = marketPrice(rankedLen());
+    $$('.coin-bal').forEach(el => { el.innerHTML = coinTag(c); });
+    const rb = $('#btn-ranked');
+    if (rb) { rb.innerHTML = `RANKED · BUY IN ${coinTag(price)} <span class="rk-sub">pays 1 per ${RANKED_RATE} pts</span>`; rb.classList.toggle('poor', c < price); }
+  }
   function renderLenPick() {
     const cur = LENGTHS.includes(store.settings.len) ? store.settings.len : 10;
     $$('[data-len]').forEach(b => { const on = Number(b.dataset.len) === cur; b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on)); });
+    renderCoins();
   }
   function updateCountdown() {
     const s = hms(msToMidnight());
@@ -966,6 +998,7 @@
     $('#howto-toggle').addEventListener('click', e => { const box = $('#howto'); box.hidden = !box.hidden; e.currentTarget.setAttribute('aria-expanded', String(!box.hidden)); Sound.click(); });
     $('#btn-begin').addEventListener('click', () => { Sound.click(); if (G) showGame(); else startGame('unlimited'); });
     $$('[data-len]').forEach(b => b.addEventListener('click', () => { Sound.click(); store.settings.len = Number(b.dataset.len); save(); renderLenPick(); }));
+    $('#btn-ranked').addEventListener('click', () => { Sound.click(); if (G) return showGame(); startGame('ranked'); });
     $('#btn-endrun').addEventListener('click', () => { if (G && G.phase === 'reveal') { Sound.click(); finish(); } });
     $$('[data-go]').forEach(b => b.addEventListener('click', () => {
       Sound.click(); const g = b.dataset.go;
@@ -976,7 +1009,7 @@
 
     $('#btn-skip').addEventListener('click', skip);
     $('#btn-descend').addEventListener('click', next);
-    $('#btn-again').addEventListener('click', () => { const e = resultsEntry; if (e && e.mode === 'pack') startGame('pack', e.key); else startGame('unlimited'); });
+    $('#btn-again').addEventListener('click', () => { const e = resultsEntry; if (e && e.mode === 'pack') startGame('pack', e.key); else if (e && e.ranked) startGame('ranked'); else startGame('unlimited'); });
     $('#btn-res-archive').addEventListener('click', () => { Sound.click(); showArchive(); });
     $('#btn-stats2').addEventListener('click', openStats);
     $('#btn-stats-title').addEventListener('click', () => { Sound.click(); openStats(); });
@@ -1033,14 +1066,15 @@
   function boot() {
     load();
     Ocean.init($('#ocean'));
-    applySettings(); wire(); buildGauge();
+    try { coinImg = Ocean.sprite('coin').c.toDataURL(); } catch (e) { /* no sprite yet */ }
+    applySettings(); wire(); buildGauge(); renderCoins();
     if (!QS.length) { document.body.insertAdjacentHTML('beforeend', '<p style="position:fixed;bottom:8px;left:8px;color:#f66">Question database failed to load.</p>'); }
     // Reloading mid-game ends that game and starts a fresh one (endless runs with answers are saved first).
     const A = store.active;
     Ocean.setView('title', true); showTitle();
     if (A && A.ids && A.ids.every(id => BY_ID.has(id))) {
       G = A;
-      if (!lenOf(G) && G.results.filter(Boolean).length) abandon(true); else discardDive();
+      if ((!lenOf(G) || G.ranked) && G.results.filter(Boolean).length) abandon(true); else if (G.ranked) { store.coins = (store.coins ?? START_COINS) + (G.price || 0); discardDive(); } else discardDive(); // ranked with no answers yet: refund
       startGame(A.mode === 'pack' ? 'pack' : 'unlimited', A.mode === 'pack' ? A.key : undefined);
     } else store.active = null;
     buildDepthLabels(); requestAnimationFrame(labelLoop);

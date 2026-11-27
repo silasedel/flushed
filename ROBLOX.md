@@ -85,3 +85,25 @@ so the question data and code stay versioned like they are now.
 4. Client UI: title, prompt card + answer box + timer, reveal, results.
 5. Art + sound upload, then the fall animation.
 6. Test with friends, then publish.
+
+## 5. Money (Robux) — how FLUSHED makes money without breaking Roblox rules
+
+**Two Roblox rules shape this:**
+1. A game can't give Robux to players. Robux only flows *in* (players buy things); developers get paid out through
+   DevEx. So "score points → win Robux" is not possible.
+2. Betting Robux (or anything bought with Robux) on an outcome to win more of it counts as gambling, which Roblox bans.
+   Check the current Roblox Community Standards / Terms before launch; rules change.
+
+**So the economy is: Robux buys stuff; Flush Coins are the game's own currency, earned by playing.**
+
+| Thing | How it works (already prototyped on the web as "Flush Coins") |
+|---|---|
+| **Flush Coins** | Earned only by playing: 1 coin per 10 points in normal games. Never sold for Robux, so wagering them isn't gambling with paid currency. |
+| **Ranked buy-in** | Spend coins to enter at the **market price**, get paid 1 coin per 5 points. The price is set ~10% above what the average player wins back (avg ≈ 25.45 pts/prompt → 5 prompts: 28, 7: 40, 10: 56), so beating the average = profit and the game keeps an edge that drains coins out of the economy. On Roblox, compute the average from real scores (Section 1's histogram), still minus the edge. |
+| **What coins buy** | Cosmetics: duck skins (gold duck, astronaut duck, rat-king duck…), toilet skins, rainbow trails, flush animations, tier-icon packs, titles. This gives coins a reason to exist. |
+| **What Robux buys** | Game passes: **VIP** (2× coins, gold name tag), **Endless+** (bigger ranked tables), **Skin bundles**. Developer products: one-off cosmetic crates (show the odds), extra "hint" uses, and *cosmetic* coin boosters if you want — but if Robux can buy coins, then coin buy-ins must use a separate earn-only ticket instead (keep paid currency out of any wager). |
+| **Leaderboards** | Weekly ranked leaderboard with cosmetic rewards (crowns, trails) — status, not Robux. |
+| **Premium Payouts** | Roblox also pays developers for time Premium members spend in the game, so long sessions (endless, ranked) earn money on their own. |
+
+Rule of thumb: *anything that can be bought with Robux must never be a stake you can win more of.*
+The 6969 cheat code is for testing only — remove it from the Roblox build (or lock it to your own UserId).

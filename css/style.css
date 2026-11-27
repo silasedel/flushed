@@ -698,3 +698,17 @@ body, button, input { font-family: var(--mono); }
 .stack-chart .sc-you-line { stroke-width: 2; }
 .stack-chart .sc-ax { fill: #7a9276; font-family: var(--mono); font-size: 10px; letter-spacing: .1em; }
 .stack-chart .sc-you-t { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: .1em; }
+
+/* Flush Coins + ranked buy-in */
+.coin { display: inline-flex; align-items: center; gap: .25em; font-weight: 700; color: #ffd23f; }
+.coin-ico { width: 1.05em !important; height: 1.05em; image-rendering: pixelated; display: inline-block !important; }
+.ranked-row { display: flex; gap: 10px; align-items: stretch; justify-content: center; margin-top: 10px; }
+.btn-ranked { flex: 1; border: 2px solid #ffd23f; background: rgba(40, 30, 6, .85); color: #ffe27a; font-family: var(--mono); font-weight: 700; letter-spacing: .18em;
+  font-size: clamp(.85rem, .7rem + .4vw, 1.05rem); padding: .7em 1em; display: inline-flex; align-items: center; justify-content: center; gap: .6em; flex-wrap: wrap; }
+.btn-ranked:hover, .btn-ranked:focus-visible { background: rgba(70, 52, 10, .95); box-shadow: 0 0 18px rgba(255, 210, 63, .35); outline: none; }
+.btn-ranked.poor { opacity: .55; }
+.btn-ranked .rk-sub { font-weight: 500; letter-spacing: .08em; font-size: .75em; color: #c9b47a; }
+.coin-bal { display: inline-flex; align-items: center; padding: 0 1em; border: 2px solid rgba(255, 210, 63, .5); background: rgba(14, 22, 16, .8); font-family: var(--mono); font-size: 1.05rem; }
+.res-coins { margin: .4em 0 0; font-family: var(--mono); letter-spacing: .08em; color: #c9d5c4; }
+.res-coins .up { color: #7dff6a; }
+.res-coins .down { color: #ff5a5a; }

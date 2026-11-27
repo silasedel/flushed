@@ -1576,7 +1576,7 @@
     if (z === 1) return pick(['tpWad', 'ring', 'lego', 'keys', 'phone', 'coin', 'sock', 'airpod', 'goldfish', 'flossPick', 'duckling', 'tpSheet']);
     if (z === 2) return pick(['mouse', 'mouse', 'rat', 'rat', 'pizza', 'gatorEyes', 'sludge', 'tpWad', 'coin', 'mouse']);
     if (z === 3) return pick(['crownMouse', 'ratking', 'cheese', 'chain', 'crownMouse', 'coin', 'coin', 'rat', 'cheese', 'ratking']);
-    return pick(['partyMouse', 'partyMouse', 'disco', 'boombox', 'glowstick', 'partyMouse', 'cheese', 'glowstick', 'auraBlob']);
+    return pick(['partyMouse', 'partyMouse', 'disco', 'boombox', 'partyMouse', 'cheese', 'disco', 'auraBlob']);
   }
 
   function glow(ctx, x, y, r, col, a) {
@@ -1624,7 +1624,7 @@
       for (let k = 0; k < n; k++) {
         const s = c * 97 + k * 31 + 5;
         const mad = dz(midM) > Z_MAD;
-        const type = mad ? ['partyMouse', 'goldtoilet', 'duckling', 'disco', 'partyMouseB', 'ratking', 'partyMouseC', 'glowstick'][Math.floor(hash(s) * 8)] : zoneCreatures(z, hash(s));
+        const type = mad ? ['partyMouse', 'goldtoilet', 'duckling', 'disco', 'partyMouseB', 'ratking', 'partyMouseC', 'cheese'][Math.floor(hash(s) * 8)] : zoneCreatures(z, hash(s));
         const m = c * CH + 6 + hash(s + 1) * (CH - 12);
         let y = (m - O.topM) * ppm;
         if (y < -30 || y > O.H + 30) continue;
@@ -1862,7 +1862,6 @@
         const jump = Math.round((Math.floor(L / STEP) % 2 ? kick : Math.pow(1 - ((O.t * 2.1 + 0.5) % 1), 3)) * 3);
         if (kind < 0.5) {
           drawSprite(ctx, v, mid - 15, y - ms.h + 1 - jump, side === 1);
-          if (hash(s + 6) > 0.5) { const gx = side ? mid - 18 : mid + 12; glow(ctx, gx + 3, y - 22 - jump, 6, [125, 255, 106], 0.3); drawSprite(ctx, 'glowstick', gx, y - 30 - jump); }
         } else if (kind < 0.75) { // boombox with notes popping out
           drawSprite(ctx, 'boombox', mid - 14, y - sprite('boombox').h + 1);
           ctx.fillStyle = ['#ff3fb4', '#7dff6a', '#4ad0ff'][Math.floor(O.t * 2) % 3];
@@ -1882,15 +1881,6 @@
           }
           glow(ctx, bx, by + 11, 14, [255, 255, 255], 0.14 + 0.1 * kick);
           drawSprite(ctx, 'disco', bx - 11, by, Math.floor(O.t * 4) % 2 === 1);
-        }
-        // neon brainrot words painted on the wall above some ledges
-        if (hash(s + 9) > 0.55) {
-          const word = WORDS[Math.floor(hash(s + 10) * WORDS.length)], ww = word.length * 4 - 1;
-          const wx = side ? Math.round(W - edge + 6) : Math.round(edge - ww - 6), wy = y - 34;
-          const on = Math.sin(O.t * (9 + hash(s + 11) * 6) + s) > -0.85;
-          const col = ['#ff3fb4', '#7dff6a', '#4ad0ff', '#ffe14a', '#c58bff'][Math.floor(hash(s + 12) * 5)];
-          if (on) glow(ctx, wx + ww / 2, wy + 2, 12, hex(col), 0.18 + 0.1 * kick);
-          pixText(ctx, word, wx, wy, on ? col : '#2a0a2a');
         }
       }
     }
