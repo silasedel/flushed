@@ -1077,9 +1077,20 @@
     if (act === 'help') return openHelp();
   }
 
+  // Play Again: pick how many prompts, then a free flush or a ranked run (with its price for that length)
+  function openPlayAgain() {
+    openModal('PLAY AGAIN', `<div class="pa">${'<div class="len-pick" role="radiogroup" aria-label="Prompts per game"><span class="len-label">PROMPTS</span><button role="radio" data-len="5">5</button><button role="radio" data-len="7">7</button><button role="radio" data-len="10">10</button><button role="radio" data-len="0" aria-label="Endless">∞</button></div>'}
+      <button class="btn-begin pa-flush" id="pa-flush"><span class="tri">▼</span>FLUSH<span class="tri">▼</span></button>
+      <button class="btn-ranked" id="pa-ranked">RANKED</button></div>`);
+    $$('#modal [data-len]').forEach(b => b.addEventListener('click', () => { Sound.click(); store.settings.len = Number(b.dataset.len); save(); renderLenPick(); }));
+    $('#pa-flush').addEventListener('click', () => { closeModal(); startGame('unlimited'); });
+    $('#pa-ranked').addEventListener('click', () => { closeModal(); startGame('ranked'); });
+    renderLenPick();
+  }
   function renderCoins() {
     const c = store.coins ?? START_COINS, price = marketPrice(rankedLen());
     $$('.coin-bal').forEach(el => { el.innerHTML = coinTag(c); });
+    const pa = $('#pa-ranked'); if (pa) { pa.innerHTML = `RANKED · ${rankedLen()} PROMPTS · ${coinTag(price)}`; pa.classList.toggle('poor', c < price); }
     const rb = $('#btn-ranked');
     if (rb) { const L = rankedLen(); rb.innerHTML = `RANKED · ${L} PROMPTS · ${coinTag(price)}`; rb.title = `Pays R$1 per ${RANKED_RATE} points. Score ${price * RANKED_RATE}+ to profit.`; rb.classList.toggle('poor', c < price); }
   }
@@ -1112,7 +1123,7 @@
 
     $('#btn-skip').addEventListener('click', skip);
     $('#btn-descend').addEventListener('click', next);
-    $('#btn-again').addEventListener('click', () => { const e = resultsEntry; if (e && e.mode === 'pack') startGame('pack', e.key); else if (e && e.ranked) startGame('ranked'); else startGame('unlimited'); });
+    $('#btn-again').addEventListener('click', () => { Sound.click(); const e = resultsEntry; if (e && e.mode === 'pack') return startGame('pack', e.key); openPlayAgain(); });
     $('#btn-res-archive').addEventListener('click', () => { Sound.click(); showArchive(); });
     $('#btn-stats2').addEventListener('click', openStats);
     $('#btn-stats-title').addEventListener('click', () => { Sound.click(); openStats(); });

@@ -19,3 +19,13 @@ Aim for real coverage: open-ended prompts should end with 80–200+ answers; fin
 At the end: `node tools/validate.js <your files>` must end OK, and `node tools/try.js` on 3–5 tricky inputs per prompt passes.
 Other agents edit other files and some writers are adding new files, so ignore build/test output about files that aren't yours.
 Report: prompts swept, answers added, aliases added, anything you weren't sure about.
+
+## NEW RULE (overrides "don't change prompt wording"): quantify anything you can't list completely
+If a prompt's real-world answer set is too big to list completely (cities/towns in a place, lakes, rivers, restaurants,
+bands, brands, YouTubers, apps, schools...), REWORD the prompt to add a clear, checkable threshold, then make the list
+COMPLETE for that threshold:
+- places: "Name a city in Nebraska with 25,000+ people." / "Name a city in Sweden (50,000+ people)."
+- chains/brands: "Name a restaurant chain with 500+ US locations."  rivers: "Name a river over 1,000 miles long."
+Keep any smaller real answers you already have as accepted bonus answers (usually 85). Pick a threshold low enough that
+the prompt stays easy and high enough that you can list every qualifying answer from solid knowledge.
+Finite sets (capitals, states, planets, teams) don't need this — just make them complete.
