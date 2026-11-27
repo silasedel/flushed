@@ -78,6 +78,10 @@ so the question data and code stay versioned like they are now.
 - **DataStore limits.** Batch the counter writes (don't write on every answer).
 
 ## 4. Order of work when we start
+**Started:** the playable Roblox version lives in `roblox/` (Rojo project). It has the full game loop, server-side
+judging, earn-only Flush Coins, ranked with boosts, shop and saving. See `roblox/README.md` for setup, tests and
+what's left (pixel art, themed packs, crowd rarity).
+
 
 1. Export script: questions → Luau modules (drops crude answers, splits by size).
 2. Port `match.js` and `crowd.js` to Luau, with the same test cases (`tools/test.js`, `tools/crowd-sim.js`).

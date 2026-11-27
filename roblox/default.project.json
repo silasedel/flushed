@@ -1,0 +1,20 @@
+{
+  "name": "Flushed",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "Shared": { "$path": "src/shared" }
+    },
+    "ServerScriptService": {
+      "Flushed": { "$path": "src/server" }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "FlushedClient": { "$path": "src/client" }
+      }
+    },
+    "Players": {
+      "$properties": { "CharacterAutoLoads": false }
+    }
+  }
+}
