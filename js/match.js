@@ -3,7 +3,7 @@
   'use strict';
   const TIERS = [
     { score: 100, key: 'million', name: 'Sigma', depth: 1000, color: '#f3cd66', blurb: 'One in a million. Absolute sigma.' },
-    { score: 85, key: 'deep', name: 'Aura', depth: 750, color: '#b77dff', blurb: '+1000 aura. Few think like this.' },
+    { score: 85, key: 'deep', name: 'Skibidi', depth: 750, color: '#b77dff', blurb: 'Certified skibidi. Few think like this.' },
     { score: 60, key: 'rare', name: 'Rizz', depth: 450, color: '#ff4d4d', blurb: "Okay, you've got something." },
     { score: 30, key: 'schooler', name: 'Mid', depth: 200, color: '#7fe3b0', blurb: 'Respectable. Kinda.' },
     { score: 10, key: 'plankton', name: 'NPC', depth: 30, color: '#a8b3c4', blurb: 'Everyone said that.' },

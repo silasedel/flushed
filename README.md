@@ -2,7 +2,7 @@
 
 A retro pixel-art brainrot trivia game. A rubber duck gets flushed: seven open-ended prompts, 25 seconds each, and rarer answers flush it deeper — through the Bowl, the Pipes, the Sewer and the Rat Kingdom down to the Brainrot Core (max 700 pts / 7,000 m).
 
-Tiers: **NPC** (10) · **Mid** (30) · **Rizz** (60) · **Aura** (85) · **Sigma** (100, exactly one per prompt).
+Tiers: **NPC** (10) · **Mid** (30) · **Rizz** (60) · **Skibidi** (85) · **Sigma** (100, exactly one per prompt).
 
 Roblox port and crowd-sourced rarity plan: [ROBLOX.md](ROBLOX.md).
 

@@ -17,7 +17,7 @@ How it works, per prompt:
 1. **Count.** When a player's answer is accepted, add 1 to that answer's counter (canonical name,
    not what they typed). One count per player per prompt per day, so spamming can't move it.
 2. **Blend with the guess.** Each curated tier is a "pretend share" of players:
-   NPC 20%, Mid 4%, Rizz 1%, Aura 0.2%, Sigma 0.05%. That guess counts as 300 pretend players:
+   NPC 20%, Mid 4%, Rizz 1%, Skibidi 0.2%, Sigma 0.05%. That guess counts as 300 pretend players:
    `share = (realCount + 300 × guess) / (realPlayers + 300)`.
    With no players the tiers are exactly the curated ones; after a few hundred players the real data dominates.
 3. **Pick the tier from the share.**
@@ -27,7 +27,7 @@ How it works, per prompt:
    | 8% or more | NPC (10) |
    | 2%–8% | Mid (30) |
    | 0.5%–2% | Rizz (60) |
-   | under 0.5% | Aura (85) |
+   | under 0.5% | Skibidi (85) |
    | the single rarest answer | Sigma (100) — always exactly one |
 
 4. **No flicker.** An answer only changes tier once it's 25% past the line.

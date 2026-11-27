@@ -8,7 +8,7 @@
   const { TIERS, tierOf, match, parseAnswers } = window.Match;
 
   // tier icons in their natural colors (Too Clever borrows the fish, tinted green)
-  const ICON_SPR = { plankton: ['icoNPC'], clever: ['icoMid'], schooler: ['icoMid'], rare: ['icoRizz'], deep: ['icoAura'], million: ['icoSigma'] };
+  const ICON_SPR = { plankton: ['icoNPC'], clever: ['icoMid'], schooler: ['icoMid'], rare: ['icoRizz'], deep: ['icoSkibidi'], million: ['icoSigma'] };
   ICON_SPR.none = ['silhouette', '#4a5b72'];
   const READ_MS = 3000, ANSWER_MS = 25000, PER_GAME = 7, MAX_SCORE = 700;
   const EPOCH = '2026-09-01'; // Daily Dive #1
@@ -426,7 +426,7 @@
     [60, 'r', 'last chance to unflush'], [150, 'l', 'lost AirPod spotted'], [260, 'r', 'someone flushed a goldfish'], [420, 'l', 'the smell intensifies'],
     [600, 'r', 'a sock. just one sock.'], [850, 'l', 'toothbrush graveyard'], [1150, 'r', 'gator sighting (unconfirmed)'], [1500, 'l', 'you can hear Ohio from here'],
     [2000, 'r', 'fatberg the size of a bus'], [2600, 'l', 'rats doing a TikTok dance'], [3200, 'r', 'the wifi is surprisingly good'], [3800, 'l', 'abandoned rubber duck colony'],
-    [4300, 'r', 'rat with a crown'], [4900, 'l', 'the rat king is watching'], [5500, 'r', 'skill issue detected'], [6300, 'l', 'aura levels critical'], [6900, 'r', 'peak brainrot ahead'],
+    [4300, 'r', 'rat with a crown'], [4900, 'l', 'the rat king is watching'], [5500, 'r', 'skill issue detected'], [6300, 'l', 'skibidi levels critical'], [6900, 'r', 'peak brainrot ahead'],
   ];
   function buildDepthLabels() {
     $('#tier-lines').innerHTML = TIERS.slice().reverse().map(t => `<div class="tl" data-d="${t.depth}" style="--tc:${t.color}"><span>${iconImg(t.key, 'pix tag-ico')} ${t.name.toUpperCase()} · ${t.score}</span></div>`).join('');
@@ -507,7 +507,7 @@
     { min: 0, max: 150, tier: 'plankton', label: '0–150', text: 'NPC. Still in the bowl, basically.' },
     { min: 151, max: 250, tier: 'schooler', label: '151–250', text: 'Mid. Made it into the pipes.' },
     { min: 251, max: 350, tier: 'rare', label: '251–350', text: 'Rizz. Deep in the sewer. Respect.' },
-    { min: 351, max: 449, tier: 'deep', label: '351–449', text: 'Aura. Rat royalty bows to you.' },
+    { min: 351, max: 449, tier: 'deep', label: '351–449', text: 'Skibidi. Rat royalty bows to you.' },
     { min: 450, max: 700, tier: 'million', label: '450+', text: 'Sigma. You reached the Brainrot Core.' },
   ];
   const TIER_COLOR = Object.fromEntries(TIERS.map(t => [t.key, t.color]));
@@ -578,7 +578,7 @@
     const mine = r.matched || r.answer;
     const all = parseAnswers(q).list.filter(a => !a.hidden || a.name === mine)
       .slice().sort((x, y) => (y.score - x.score) || x.name.localeCompare(y.name));
-    const SHORT = { million: 'Sigma', deep: 'Aura', rare: 'Rizz', schooler: 'Mid', plankton: 'NPC' };
+    const SHORT = { million: 'Sigma', deep: 'Skibidi', rare: 'Rizz', schooler: 'Mid', plankton: 'NPC' };
     const chips = [`<button class="ab-chip on" data-t="all">All <b>${fmt(all.length)}</b></button>`]
       .concat(TIERS.map(t => `<button class="ab-chip" data-t="${t.score}" style="--c:${t.color}">${SHORT[t.key]} <b>${fmt(all.filter(a => a.score === t.score).length)}</b></button>`));
     more.innerHTML = `${r.tries && r.tries.length ? `<p class="more-tries">Your misses: ${r.tries.map(t => `<s>${esc(t)}</s>`).join(', ')}</p>` : ''}
