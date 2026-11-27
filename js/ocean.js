@@ -42,7 +42,7 @@
   // Each sprite: rows of chars, palette maps char -> color. '.' is transparent.
   const SPR = {
     // tier icons (16x16, outlined)
-    icoSkibidi: { p: {'k': '#1a1418', 'W': '#f4f2ee', 'w': '#dcd8d0', 'h': '#ffffff', 'S': '#a8a296', 'd': '#6a7458', 'D': '#4a5440', 'H': '#241812', 'F': '#e6b088', 'f': '#b47a52', 'E': '#ffffff', 'e': '#4a8ad0', 'p': '#0a1a2a', 'm': '#2a0a0a', 'y': '#efe08a'}, r: [
+    icoSkibidi: { p: {'k': '#1c0a30', 'W': '#c58bff', 'w': '#a868f0', 'h': '#ead6ff', 'S': '#7a3fd0', 'd': '#4a2280', 'D': '#2e1258', 'H': '#241812', 'F': '#e6b088', 'f': '#b47a52', 'E': '#ffffff', 'e': '#4a8ad0', 'p': '#0a1a2a', 'm': '#2a0a0a', 'y': '#efe08a'}, r: [
       '......kWWWWWWWWWWWWWWWWWWk......',
       '.....kWWhhhhhHHHHHHhhhhhWWk.....',
       '....kWWwwHHHHHHHHHHHHHHHwWWk....',
