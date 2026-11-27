@@ -470,7 +470,7 @@
     const [name, tint, flip] = ICON_SPR[key || 'none'];
     const s = Ocean.sprite(name, tint || undefined); c.width = s.w; c.height = s.h; ctx.clearRect(0, 0, s.w, s.h); ctx.drawImage(flip ? s.f : s.c, 0, 0);
     $('#phase-reveal').dataset.tier = key || 'none';
-    const k = Math.max(4, Math.round(64 / s.w)); c.style.width = `${s.w * k}px`; c.style.height = `${s.h * k}px`;
+    const k = Math.max(2, Math.round(64 / s.w)); c.style.width = `${s.w * k}px`; c.style.height = `${s.h * k}px`;
   }
 
   // depth -> zone banner + gauge during animation
@@ -565,7 +565,7 @@
       if (!t) { svg += `<circle cx="${cx}" cy="${y(0)}" r="4" class="nocatch"/>`; return; }
       const cy = y(r.score);
       svg += `<line x1="${cx}" x2="${cx}" y1="${y(0)}" y2="${cy}" stroke="${t.color}" class="drop" style="--len:${cy - y(0)}"/>`;
-      const s = Ocean.sprite(ICON_SPR[t.key][0], ICON_SPR[t.key][1] || undefined); const k = 2;
+      const s = Ocean.sprite(ICON_SPR[t.key][0], ICON_SPR[t.key][1] || undefined); const k = Math.max(1, Math.round(32 / s.w));
       svg += `<image href="${iconURL(t.key)}" x="${cx - s.w * k / 2}" y="${cy - s.h * k / 2}" width="${s.w * k}" height="${s.h * k}" class="pix-svg"/>`;
     });
     $('#dive-chart').innerHTML = svg;
@@ -608,7 +608,7 @@
   }
 
   function shareText(e) {
-    const sq = { 0: '⬛', 10: '⬜', 15: '⬜', 30: '🟩', 60: '🟥', 85: '🟪', 100: '🟨' };
+    const sq = { 0: '⬛', 10: '⬜', 15: '⬜', 30: '🟦', 60: '🟥', 85: '🟪', 100: '🟨' };
     const head = e.mode === 'daily' || e.mode === 'archive' ? `FLUSHED #${e.dayNo}${e.mode === 'archive' ? ' (archive)' : ''}` : e.mode === 'pack' ? `FLUSHED · ${(PACKS.find(p => p.key === e.key) || {}).name} pack` : 'FLUSHED · Unlimited';
     return `${head} 🦆\n${e.score}/700 · -${fmt(e.depth)}m\n${e.results.map(r => sq[r.score] || '⬛').join('')}`;
   }

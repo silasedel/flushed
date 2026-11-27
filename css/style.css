@@ -218,7 +218,7 @@ button:disabled { cursor: default; opacity: .45; }
 .dive-chart .nocatch { fill: none; stroke: #56684f; stroke-width: 1.5; }
 .dive-chart .pix-svg { image-rendering: pixelated; }
 @keyframes drop { to { stroke-dashoffset: 0; } }
-.pix { image-rendering: pixelated; width: 22px; height: auto; display: block; }
+.pix { image-rendering: pixelated; width: 24px; height: auto; display: block; }
 .bearing { list-style: none; margin: 0; padding: 0; }
 .bearing li { display: grid; grid-template-columns: 28px 6.5em 1fr; align-items: center; gap: .8em; padding: .75em .2em; border-bottom: 1px solid rgba(167,187,163,.18); font-family: var(--mono); font-size: 0.888rem; color: #879f81; }
 .bearing li.on { color: #fff; background: linear-gradient(90deg, rgba(157,255,122,.08), transparent); }
