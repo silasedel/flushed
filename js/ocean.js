@@ -44,19 +44,23 @@
   // ---------- sprites ----------
   // Each sprite: rows of chars, palette maps char -> color. '.' is transparent.
   const SPR = {
-    robux: { p: {'k': '#0a0c10', 'W': '#f4f6fa', 'w': '#c9ced8', 'h': '#ffffff'}, r: [
-      '....kkkk....',
-      '..kkhWWWkk..',
-      '.khWWWWWWwk.',
-      'khWWkkkkWWwk',
-      'kWWk....kWwk',
-      'kWWk....kWwk',
-      'kWWk....kWwk',
-      'kWWk....kWwk',
-      'kWWWkkkkWWwk',
-      '.kWWWWWWWwk.',
-      '..kkwwwwkk..',
-      '....kkkk....',
+    robux: { p: {'k': '#0a0c10', 'W': '#f4f6fa', 'w': '#b9c0cc', 'h': '#ffffff'}, r: [
+      '.......kk.......',
+      '.....kkhWkk.....',
+      '...kkhhWWWWkk...',
+      '.kkhWWWWWWWWwkk.',
+      'khWWWWWWWWWWWwwk',
+      'khWWWkkkkkkWWwwk',
+      'khWWWk....kWWwwk',
+      'kWWWWk....kWWwwk',
+      'kWWWWk....kWWwwk',
+      'kWWWWk....kWWwwk',
+      'kWWWWkkkkkkWWwwk',
+      'kWWWWWWWWWWWWwwk',
+      '.kkWWWWWWWWWwkk.',
+      '...kkWWWWWwkk...',
+      '.....kkWwkk.....',
+      '.......kk.......',
     ] },
     // ---- floating junk, zone by zone ----
     partyMouseCF: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#7dff6a', 'c': '#ff3fb4', 'y': '#ffffff'}, r: [
