@@ -1631,7 +1631,6 @@
         const ph = hash(s + 5) * 6.28;
         const bob = Math.round(Math.sin(O.t * (swims ? 3 : 1.4) + ph) * (swims ? 1 : 2));
         const yy = y + bob;
-        if (!O.endless && dz(m) > 7020) continue; // nothing floats inside the rave floor
         const dd = dz(m), wl = dd < SEWER_TOP ? pipeW(dd) : sewerW(dd, 0), wr = dd < SEWER_TOP ? pipeW(dd) : sewerW(dd, 1);
         ctx.save(); ctx.beginPath(); ctx.rect(Math.round(wl), yy - 40, Math.round(O.W - wl - wr), 80); ctx.clip();
         drawOne(ctx, type, x, y, yy, dir, ph, s, z, swims);
@@ -1714,7 +1713,7 @@
   function sewerW(d, side) {
     const n = Math.sin(d * (side ? 0.027 : 0.031) + side * 2) * 6 + Math.sin(d * (side ? 0.09 : 0.11)) * 3;
     const w = O.W * (0.2 + 0.1 * clamp((d - SEWER_TOP) / 5000, 0, 1)) + n * smooth(SEWER_TOP, SEWER_TOP + 200, d);
-    return O.endless ? w : w * (1 - 0.9 * smooth(6780, 7060, d)); // the tunnel opens into the rave cavern at the bottom
+    return w;
   }
   function drawTrench(ctx) {
     const ppm = O.ppm;
@@ -1783,11 +1782,82 @@
         }
       }
     }
-    if (yFloor < O.H + 160 && !O.endless) drawParty(ctx, yFloor);
+    drawLedges(ctx);
+  }
+
+  // Ledges: bricks jutting out of the tunnel walls with things sitting on them. Sparse in the sewer,
+  // busier in the Rat Kingdom, and in the Brainrot Core it turns into a rave stuck to the walls:
+  // party mice dancing on ledges, disco balls hanging underneath, boomboxes, neon brainrot words.
+  const WORDS = ['SKIBIDI', 'OHIO', 'RIZZ', 'SIGMA', 'AURA', 'MEWING', 'NPC', 'GOATED', 'COOKED', 'W', 'FANUM TAX', 'GYM', 'SUS', 'LOCK IN'];
+  function drawLedges(ctx) {
+    const ppm = O.ppm, W = O.W, STEP = 70, kick = beatPulse();
+    const top = dz(O.topM) - 60, bot = dz(O.topM + O.H / ppm) + 60;
+    for (let L = Math.max(SEWER_TOP + 150, Math.floor(top / STEP) * STEP); L < bot; L += STEP) {
+      const s = L * 7 + 13, deepness = clamp((L - 4000) / 5000, 0, 1);
+      const chance = L < 4000 ? 0.16 : L < 6000 ? 0.3 : 0.42 + 0.33 * deepness; // gets busier the deeper you go
+      if (hash(s) > chance) continue;
+      const side = hash(s + 1) > 0.5 ? 1 : 0, y = Math.round((L + OFF - O.topM) * ppm);
+      const edge = sewerW(L, side), len = 30 + Math.floor(hash(s + 2) * 3) * 6, zc = wallColors(L);
+      const x0 = side ? Math.round(W - edge - len) : Math.round(edge - 2);
+      // the shelf: two rows of bricks sticking out of the wall
+      ctx.fillStyle = zc[2]; ctx.fillRect(x0, y, len + 2, 7);
+      ctx.fillStyle = zc[0]; ctx.fillRect(x0 + 1, y, len, 3); ctx.fillRect(x0 + 1, y + 4, len, 2);
+      ctx.fillStyle = zc[1]; ctx.fillRect(x0 + 1, y, len, 1);
+      ctx.fillStyle = zc[3]; for (let bx = x0 + 6 + (side ? 0 : 3); bx < x0 + len; bx += 9) ctx.fillRect(bx, y + 1, 1, 2);
+      const mid = side ? x0 + Math.round(len * 0.4) : x0 + Math.round(len * 0.6), face = side === 0; // things face the middle of the tunnel
+      const kind = hash(s + 3);
+      if (L < 4000) { // sewer: a mouse peeking out, or a roach
+        if (kind < 0.6) drawSprite(ctx, 'mouse0', mid - 15, y - sprite('mouse0').h + 1, side === 1);
+        else drawSprite(ctx, 'roach', mid - 11, y - sprite('roach').h + 2, side === 1);
+      } else if (L < 6000) { // rat kingdom: royalty and riches
+        if (kind < 0.45) drawSprite(ctx, 'crownMouse', mid - 15, y - sprite('crownMouse').h + 1, side === 1);
+        else if (kind < 0.75) { glow(ctx, mid, y - 6, 10, [255, 213, 74], 0.14); drawSprite(ctx, 'cheese', mid - 11, y - sprite('cheese').h + 1, side === 1); }
+        else { drawSprite(ctx, 'coin', mid - 8, y - 11); drawSprite(ctx, 'coin', mid - 2, y - 11); drawSprite(ctx, 'coin', mid - 5, y - 19); }
+        if (hash(s + 4) > 0.6) drawSprite(ctx, 'chain', x0 + 2, y + 6); // chain draped off the edge
+      } else { // the Brainrot Core: the rave lives on the walls
+        const v = ['partyMouse', 'partyMouseB', 'partyMouseC'][Math.floor(hash(s + 5) * 3)], ms = sprite(v);
+        const jump = Math.round((Math.floor(L / STEP) % 2 ? kick : Math.pow(1 - ((O.t * 2.1 + 0.5) % 1), 3)) * 3);
+        if (kind < 0.5) {
+          drawSprite(ctx, v, mid - 15, y - ms.h + 1 - jump, side === 1);
+          if (hash(s + 6) > 0.5) { const gx = side ? mid - 18 : mid + 12; glow(ctx, gx + 3, y - 22 - jump, 6, [125, 255, 106], 0.3); drawSprite(ctx, 'glowstick', gx, y - 30 - jump); }
+        } else if (kind < 0.75) { // boombox with notes popping out
+          drawSprite(ctx, 'boombox', mid - 14, y - sprite('boombox').h + 1);
+          ctx.fillStyle = ['#ff3fb4', '#7dff6a', '#4ad0ff'][Math.floor(O.t * 2) % 3];
+          const ny = y - 22 - Math.round(((O.t * 12) % 14)); ctx.fillRect(mid + 2, ny, 2, 2); ctx.fillRect(mid + 3, ny - 4, 1, 4);
+        } else { // a mouse throwing it down next to a cheese
+          drawSprite(ctx, v, mid - 15, y - ms.h + 1 - jump, side === 1);
+          drawSprite(ctx, 'cheese', side ? mid + 12 : mid - 34, y - sprite('cheese').h + 1, side === 1);
+        }
+        // a disco ball hanging under the ledge, throwing beams across the tunnel
+        if (hash(s + 7) > 0.45) {
+          const bx = side ? x0 + 4 : x0 + len - 4, by = y + 14;
+          ctx.fillStyle = '#5a5a6a'; ctx.fillRect(bx, y + 6, 1, 8);
+          for (let i = 0; i < 4; i++) {
+            const a = O.t * 0.9 + i * 1.57 + hash(s + 8) * 6;
+            ctx.fillStyle = rgb(hex(['#ff3fb4', '#7dff6a', '#4ad0ff', '#ffe14a'][i]), (0.06 + 0.05 * kick).toFixed(3));
+            ctx.beginPath(); ctx.moveTo(bx, by + 11); ctx.lineTo(bx + Math.cos(a - 0.08) * 90, by + 11 + Math.sin(a - 0.08) * 90); ctx.lineTo(bx + Math.cos(a + 0.08) * 90, by + 11 + Math.sin(a + 0.08) * 90); ctx.fill();
+          }
+          glow(ctx, bx, by + 11, 14, [255, 255, 255], 0.14 + 0.1 * kick);
+          drawSprite(ctx, 'disco', bx - 11, by, Math.floor(O.t * 4) % 2 === 1);
+        }
+        // neon brainrot words painted on the wall above some ledges
+        if (hash(s + 9) > 0.55) {
+          const word = WORDS[Math.floor(hash(s + 10) * WORDS.length)], ww = word.length * 4 - 1;
+          const wx = side ? Math.round(W - edge + 6) : Math.round(edge - ww - 6), wy = y - 34;
+          const on = Math.sin(O.t * (9 + hash(s + 11) * 6) + s) > -0.85;
+          const col = ['#ff3fb4', '#7dff6a', '#4ad0ff', '#ffe14a', '#c58bff'][Math.floor(hash(s + 12) * 5)];
+          if (on) glow(ctx, wx + ww / 2, wy + 2, 12, hex(col), 0.18 + 0.1 * kick);
+          pixText(ctx, word, wx, wy, on ? col : '#2a0a2a');
+        }
+      }
+    }
   }
 
   // 3x5 pixel font for the neon sign
-  const GLYPH = { A: '010101111101101', B: '110101110101110', E: '111100110100111', I: '111010010010111', N: '101111111111101', O: '111101101101111',
+  const GLYPH = { C: '111100100100111', D: '110101101101110', G: '111100101101111', H: '101101111101101', K: '101110100110101',
+                  M: '101111111101101', P: '110101110100100', S: '111100111001111', W: '101101111111101', Z: '111001010100111', U: '101101101101111',
+                  L: '100100100100111', F: '111100110100100', Y: '101101010010010', X: '101101010101101', '!': '010010010000010',
+                  A: '010101111101101', B: '110101110101110', E: '111100110100111', I: '111010010010111', N: '101111111111101', O: '111101101101111',
                   R: '110101110101101', T: '111010010010010', V: '101101101101010', ' ': '000000000000000' };
   function pixText(ctx, str, x, y, col) {
     ctx.fillStyle = col;
@@ -1848,6 +1918,10 @@
 
   // wall colours by depth: [face, highlight, shadow, mortar, drip]
   function wallColors(m) {
+    if (m > 7000) { // past the core it gets unhinged: rainbow bricks that pulse with the beat
+      const h = Math.floor((m / 6 + O.t * 40) % 360), l = 18 + Math.round(beatPulse() * 8);
+      return [`hsl(${h},55%,${l}%)`, `hsl(${h},70%,${l + 14}%)`, `hsl(${h},50%,${l - 8}%)`, `hsl(${h},40%,${Math.max(4, l - 12)}%)`, `hsla(${(h + 180) % 360},100%,65%,0.7)`];
+    }
     if (m < 4000) return ['#2e3d2d', '#43573f', '#1b241a', '#151d15', 'rgba(125,255,106,0.55)'];
     if (m < 6000) return ['#2f2244', '#43325f', '#1b1229', '#140d1f', 'rgba(255,213,74,0.6)'];
     return ['#3a1236', '#56204f', '#1e081c', '#16061a', 'rgba(255,63,180,0.65)'];
