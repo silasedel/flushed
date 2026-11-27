@@ -109,11 +109,11 @@ Rule of thumb: *anything that can be bought with Robux must never be a stake you
 The 6969 cheat code is for testing only — remove it from the Roblox build (or lock it to your own UserId).
 
 ### The profit system (built into the web prototype, port it as-is)
-- **Ranked buy-in tracks the real average.** Price = (average points per prompt × prompts ÷ 20) × 1.10, rounded up.
+- **Ranked buy-in tracks the real average.** Entry = (average points per prompt × prompts ÷ 10) × 1.05, rounded up; payout = score ÷ 10, rounded down.
   The average comes from *recent* ranked prompts (web: this device, blended with a 25.45 prior; Roblox: all players'
   last ~10,000 ranked prompts in a DataStore, recomputed every few minutes). Players get better → price goes up;
-  worse → down. The 10% cut means payouts can never outrun buy-ins on average, whatever tricks people find.
-  Starting prices with the default average: 5 prompts = 7, 7 prompts = 10, 10 prompts = 14 (pays 1 per 20 points).
+  worse → down. The 5% cut plus rounding (entry up, payout down) means payouts can never outrun buy-ins on average, whatever tricks people find.
+  Starting prices with the default average: 5 prompts = 14, 7 prompts = 19, 10 prompts = 27 (a 230-point run pays 23).
 - **Shop (pure profit, no effect on score):** duck skins 100–300, toilet skins 150–400, trails 120–200.
 - **Boost:** Extra Time (+5s every prompt, one ranked run) costs 5 — worth far less than 5 in extra payout on average,
   so it's profitable too. Don't sell boosts that add points directly.

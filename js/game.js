@@ -22,13 +22,13 @@
   // You start with R$1,000. Normal games are free and pay nothing. Ranked: buy in at the "market price" for the
   // number of prompts, get paid R$1 per 5 points. The price sits ~10% above what an average player wins back, so
   // beating the average = profit and the house keeps a small edge. See ROBLOX.md, "Money" for the real-Roblox rules.
-  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 20, AVG_PER_PROMPT = 25.45; // R$1 per 20 pts
+  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 10, AVG_PER_PROMPT = 25.45; // payout = score ÷ 10, rounded down
   const rankedLen = () => (LENGTHS.includes(store.settings.len) && store.settings.len ? store.settings.len : 10);
   // The buy-in follows how players ACTUALLY score (recent prompts), not a fixed guess: if people get better the price
   // rises, if they get worse it falls. Price = average payout for that length + the house cut, so on average the house
   // always takes in more than it pays out. Web: this device's recent prompts blended with the model. Roblox: every
   // player's recent ranked prompts (DataStore), same formula.
-  const HOUSE_CUT = 1.1, PRIOR_PROMPTS = 40;
+  const HOUSE_CUT = 1.05, PRIOR_PROMPTS = 40; // entry = average payout + 5%, rounded up
   function avgPerPrompt() {
     const recent = cleanGames().slice(-40).flatMap(e => e.results.map(r => r.score || 0)).slice(-300);
     return (AVG_PER_PROMPT * PRIOR_PROMPTS + recent.reduce((a, b) => a + b, 0)) / (PRIOR_PROMPTS + recent.length);
@@ -834,17 +834,33 @@
   }
   // ---------- Shop ----------
   // Cosmetics are pure profit (no effect on score). The one boost is priced well above what it adds to an average payout.
+  // Price ladder: cheap impulse buys (5-25) so everyone can get something, a solid middle (100-400), and a few
+  // absurd flex items (25,000-1,000,000) for the rare player with way too much Robux.
   const SHOP = [
+    { id: 'duck-mint', type: 'duck', name: 'Mint Duck', price: 5, tint: '~#9fffd0' },
+    { id: 'duck-peach', type: 'duck', name: 'Peach Duck', price: 10, tint: '~#ffb88a' },
+    { id: 'duck-lemon', type: 'duck', name: 'Lemonade Duck', price: 15, tint: '~#fff27a' },
+    { id: 'duck-diamond', type: 'duck', name: 'Diamond Duck', price: 25000, tint: '~#dff8ff', fx: 'diamond' },
+    { id: 'duck-rainbow', type: 'duck', name: 'Rainbow Duck', price: 100000, fx: 'rainbow' },
+    { id: 'duck-million', type: 'duck', name: 'One-in-a-Million Duck', price: 1000000, tint: '~#ffd23f', fx: 'million' },
     { id: 'duck-gold', type: 'duck', name: 'Golden Duck', price: 250, tint: '~#ffcc33' },
     { id: 'duck-ninja', type: 'duck', name: 'Ninja Duck', price: 150, tint: '~#4a4f5e' },
     { id: 'duck-bubblegum', type: 'duck', name: 'Bubblegum Duck', price: 100, tint: '~#ff7ac8' },
     { id: 'duck-ice', type: 'duck', name: 'Ice Duck', price: 100, tint: '~#9fe8ff' },
     { id: 'duck-toxic', type: 'duck', name: 'Toxic Duck', price: 120, tint: '~#7dff6a' },
     { id: 'duck-void', type: 'duck', name: 'Void Duck', price: 300, tint: '~#8a5cff' },
+    { id: 'toilet-sky', type: 'toilet', name: 'Sky Blue Toilet', price: 10, tint: '~#bfe6ff' },
+    { id: 'toilet-mint', type: 'toilet', name: 'Mint Toilet', price: 20, tint: '~#c6ffe0' },
     { id: 'toilet-gold', type: 'toilet', name: 'Golden Throne', price: 400, sprite: 'goldtoilet' },
+    { id: 'toilet-diamond', type: 'toilet', name: 'Diamond Throne', price: 250000, tint: '~#e6fbff', fx: 'diamond' },
+    { id: 'toilet-ratking', type: 'toilet', name: "Rat King's Throne", price: 500000, sprite: 'goldtoilet', fx: 'crown' },
     { id: 'toilet-pink', type: 'toilet', name: 'Pink Porcelain', price: 150, tint: '~#ffb3d9' },
     { id: 'toilet-obsidian', type: 'toilet', name: 'Obsidian Throne', price: 250, tint: '~#4a4458' },
+    { id: 'trail-bubble', type: 'trail', name: 'Bubble Trail', price: 5, trail: 'bubble' },
+    { id: 'trail-confetti', type: 'trail', name: 'Confetti Trail', price: 25, trail: 'confetti' },
     { id: 'trail-rainbow', type: 'trail', name: 'Rainbow Trail', price: 200, trail: 'rainbow' },
+    { id: 'trail-money', type: 'trail', name: 'Money Trail', price: 75000, trail: 'money' },
+    { id: 'trail-aura', type: 'trail', name: 'Infinite Aura Trail', price: 150000, trail: 'aura' },
     { id: 'trail-sparkle', type: 'trail', name: 'Sparkle Trail', price: 120, trail: 'sparkle' },
     { id: 'trail-fire', type: 'trail', name: 'Fire Trail', price: 175, trail: 'fire' },
     { id: 'boost-time', type: 'boost', name: 'Extra Time', note: '+5s every prompt, next ranked run', price: 5 },
@@ -852,17 +868,19 @@
   function applySkin() {
     const eq = store.equip || {}, byId = id => SHOP.find(s => s.id === id) || {};
     const d = byId(eq.duck), tl = byId(eq.toilet), tr = byId(eq.trail);
-    Ocean.setSkin({ duckTint: d.tint, toiletSprite: tl.sprite, toiletTint: tl.tint, trail: tr.trail });
+    Ocean.setSkin({ duckTint: d.tint, duckFx: d.fx, toiletSprite: tl.sprite, toiletTint: tl.tint, toiletFx: tl.fx, trail: tr.trail });
   }
   function shopHtml() {
     const own = store.owned || {}, eq = store.equip || {}, c = store.coins ?? START_COINS;
-    const preview = s => { const sp = Ocean.sprite(s.type === 'toilet' ? (s.sprite || 'toilet') : s.type === 'duck' ? 'duck0' : 'robux', s.tint); return s.type === 'trail' ? `<span class="trail-sw trail-${s.trail}"></span>` : s.type === 'boost' ? '<span class="boost-sw">+5s</span>' : `<img class="pix shop-img" src="${sp.c.toDataURL()}" alt="">`; };
-    const group = (type, title) => `<h3 class="mh">${title}</h3><div class="shop-grid">${SHOP.filter(s => s.type === type).map(s => {
+    const preview = s => { const sp = Ocean.sprite(s.type === 'toilet' ? (s.sprite || 'toilet') : s.type === 'duck' ? 'duck0' : 'robux', s.fx === 'rainbow' ? '~#ff7ad9' : s.tint); return s.type === 'trail' ? `<span class="trail-sw trail-${s.trail}"></span>` : s.type === 'boost' ? '<span class="boost-sw">+5s</span>' : `<img class="pix shop-img" src="${sp.c.toDataURL()}" alt="">`; };
+    const rarity = p => p >= 100000 ? ['MYTHIC', 'r-mythic'] : p >= 10000 ? ['LEGENDARY', 'r-legend'] : p >= 100 ? ['RARE', 'r-rare'] : ['COMMON', 'r-common'];
+    const group = (type, title) => `<h3 class="mh">${title}</h3><div class="shop-grid">${SHOP.filter(s => s.type === type).sort((a, b) => a.price - b.price).map(s => {
       const owned = own[s.id], on = eq[s.type] === s.id;
       const btn = s.type === 'boost' ? `<button class="shop-btn" data-buy="${s.id}" ${c < s.price ? 'disabled' : ''}>BUY ${coinTag(s.price)}</button><span class="shop-have">have ${((store.boosts || {}).time) || 0}</span>`
         : owned ? `<button class="shop-btn ${on ? 'on' : ''}" data-equip="${s.id}">${on ? 'EQUIPPED' : 'EQUIP'}</button>`
         : `<button class="shop-btn" data-buy="${s.id}" ${c < s.price ? 'disabled' : ''}>BUY ${coinTag(s.price)}</button>`;
-      return `<div class="shop-item">${preview(s)}<b>${s.name}</b>${s.note ? `<small>${s.note}</small>` : ''}${btn}</div>`;
+      const [rl, rc] = rarity(s.price);
+      return `<div class="shop-item ${rc}"><span class="rar">${s.type === 'boost' ? 'BOOST' : rl}</span>${preview(s)}<b>${s.name}</b>${s.note ? `<small>${s.note}</small>` : ''}${btn}</div>`;
     }).join('')}</div>`;
     return `<p class="shop-bal">Balance ${coinTag(c)}</p>${group('duck', 'DUCKS')}${group('toilet', 'TOILETS')}${group('trail', 'TRAILS')}${group('boost', 'BOOSTS')}
       <p class="fine">${Object.keys(own).length ? `<button class="link-btn" data-equip="default">Use the default look</button>` : ''}</p>`;

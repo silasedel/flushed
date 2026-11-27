@@ -750,3 +750,17 @@ body[data-screen="results"] .robux-corner, body[data-screen="packs"] .robux-corn
 .trail-fire { background: linear-gradient(90deg, #fff3b0, #ffb020, #ff4d2a); clip-path: polygon(0 30%, 100% 45%, 100% 55%, 0 70%); }
 .trail-sparkle { background: radial-gradient(circle at 20% 50%, #fff 0 2px, transparent 3px), radial-gradient(circle at 50% 30%, #ffe14a 0 2px, transparent 3px), radial-gradient(circle at 80% 60%, #fff 0 2px, transparent 3px); }
 .boost-sw { font-family: var(--mono); font-weight: 700; font-size: 1.4rem; color: #7dff6a; height: 40px; display: flex; align-items: center; }
+
+.shop-item { position: relative; }
+.shop-item .rar { font-size: .62rem; letter-spacing: .2em; font-weight: 700; }
+.r-common .rar { color: #9fb39a; } .r-rare .rar { color: #6fc8ff; }
+.r-legend { border-color: #ffd23f !important; box-shadow: 0 0 14px rgba(255,210,63,.25); } .r-legend .rar { color: #ffd23f; }
+.r-mythic { border-color: #c58bff !important; box-shadow: 0 0 18px rgba(197,139,255,.35); background: linear-gradient(160deg, rgba(60,20,90,.8), rgba(14,22,16,.85)) !important; }
+.r-mythic .rar { background: linear-gradient(90deg, #ff4d6a, #ffe14a, #7dff6a, #4ad0ff, #c58bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.trail-bubble { background: radial-gradient(circle at 25% 50%, #cfefff 0 3px, transparent 4px), radial-gradient(circle at 60% 35%, #cfefff 0 2px, transparent 3px), radial-gradient(circle at 80% 60%, #cfefff 0 2px, transparent 3px); }
+.trail-confetti { background: radial-gradient(circle at 20% 40%, #ff3fb4 0 2px, transparent 3px), radial-gradient(circle at 45% 60%, #7dff6a 0 2px, transparent 3px), radial-gradient(circle at 70% 35%, #4ad0ff 0 2px, transparent 3px), radial-gradient(circle at 85% 65%, #ffe14a 0 2px, transparent 3px); }
+.trail-money { background: radial-gradient(circle at 25% 50%, #fff 0 4px, #111 5px, transparent 6px), radial-gradient(circle at 65% 45%, #fff 0 4px, #111 5px, transparent 6px); }
+.trail-aura { background: linear-gradient(90deg, #1a0b2e, #8a5cff, #1a0b2e); clip-path: polygon(0 20%, 100% 45%, 100% 55%, 0 80%); }
+
+.fine-print { margin: 6px auto 0; max-width: 680px; font-family: var(--mono); font-size: .55rem; line-height: 1.35; letter-spacing: .03em; color: rgba(201,213,196,.5); text-align: center; }
+@media (max-height: 640px) { .fine-print { font-size: .5rem; margin-top: 4px; } }

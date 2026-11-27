@@ -1546,7 +1546,16 @@
     O.toiletCX = bx + bs.w * k / 2;
     const surfAt = Math.round(1.6 + Math.sin((bx + bs.w * k / 2) * 0.035 + O.t * 0.9) * 1.3);
     const ty = y + surfAt - (bs.h - 2) * k;
+    if (O.skin.toiletFx === 'diamond') glow(ctx, bx + bs.w * k / 2, ty + bs.h * k / 2, bs.w * k * 0.7, [200, 240, 255], 0.2);
     ctx.drawImage(bs.c, bx, ty, bs.w * k, bs.h * k);
+    if (O.skin.toiletFx === 'diamond') sparkles(ctx, bx + bs.w * k / 2, ty + bs.h * k / 2, bs.w * k * 0.6, 10, ['#ffffff', '#bff0ff']);
+    if (O.skin.toiletFx === 'crown') { // the rat king's crown on the tank
+      const cw = 8 * k / 2, cx0 = Math.round(bx + bs.w * k / 2 - cw / 2), cy0 = Math.round(ty - 5 * k / 2), u = Math.max(1, Math.round(k / 2));
+      ctx.fillStyle = '#ffd23f'; ctx.fillRect(cx0, cy0 + 2 * u, cw, 3 * u);
+      for (let i = 0; i < 3; i++) ctx.fillRect(cx0 + Math.round(i * (cw - u) / 2), cy0, u, 2 * u);
+      ctx.fillStyle = '#ff3f6a'; ctx.fillRect(cx0 + Math.round(cw / 2) - u, cy0 + 3 * u, u * 2, u);
+      glow(ctx, cx0 + cw / 2, cy0 + 2 * u, cw, [255, 210, 63], 0.2);
+    }
     if (O.view === 'title' || O.view === 'intro') drawDuckInBowl(ctx, bs, bx, ty, k);
   }
 
@@ -1559,7 +1568,7 @@
   function drawDuckInBowl(ctx, bs, bx, ty, k) {
     const p = O.view === 'intro' ? (O.reduced ? 1 : flushP()) : -1;
     const cx = bx + Math.round(bs.w * k / 2), rimY = ty + 6 * k, bowlR = 6.5 * k;
-    const ds = sprite('duck0', O.skin.duckTint);
+    const ds = sprite('duck0', duckTint());
     const ds0 = k * 0.42;
     if (p >= 0 && p < 1.05) { // calm swirl of foam that slowly tightens
       const sw = clamp(p / 0.9, 0, 1), n = 16;
@@ -2005,6 +2014,27 @@
     const x = Math.round(O.W * 0.72), y = Math.round(ySurf - ds.h * 2 + 6 + Math.sin(O.t * 1.6) * 1.5);
     ctx.globalAlpha = O.tmix; ctx.drawImage(ds.c, x, y, ds.w * 2, ds.h * 2); ctx.globalAlpha = 1;
   }
+  // skins with special effects (the expensive ones)
+  const RAINBOW = ['#ff4d6a', '#ff9a2a', '#ffe14a', '#7dff6a', '#4ad0ff', '#8a7aff', '#ff7ad9'];
+  function duckTint() { return O.skin.duckFx === 'rainbow' ? '~' + RAINBOW[Math.floor(O.t * 4) % RAINBOW.length] : O.skin.duckTint; }
+  function sparkles(ctx, cx, cy, r, n, cols) {
+    for (let i = 0; i < n; i++) {
+      const a = O.t * 1.3 + i * 2.39, on = Math.sin(O.t * 5 + i * 1.7) > 0.3; if (!on) continue;
+      const x = Math.round(cx + Math.cos(a) * r * (0.6 + 0.4 * Math.sin(i))), y = Math.round(cy + Math.sin(a) * r * 0.7);
+      ctx.fillStyle = cols[i % cols.length]; ctx.fillRect(x, y - 1, 1, 3); ctx.fillRect(x - 1, y, 3, 1);
+    }
+  }
+  function duckFx(ctx, cx, cy, s) {
+    const fx = O.skin.duckFx; if (!fx) return;
+    if (fx === 'diamond') { glow(ctx, cx, cy, 14 * s, [200, 240, 255], 0.2); sparkles(ctx, cx, cy, 14 * s, 6, ['#ffffff', '#bff0ff']); }
+    if (fx === 'rainbow') { glow(ctx, cx, cy, 16 * s, hex(RAINBOW[Math.floor(O.t * 4) % RAINBOW.length]), 0.22); }
+    if (fx === 'million') { // gold glow, orbiting sparkles and a tiny crown
+      glow(ctx, cx, cy, 20 * s, [255, 210, 63], 0.3 + 0.1 * Math.sin(O.t * 3)); sparkles(ctx, cx, cy, 18 * s, 8, ['#fff3b0', '#ffd23f', '#ffffff']);
+      const kx = Math.round(cx - 3), ky = Math.round(cy - 12 * s);
+      ctx.fillStyle = '#ffd23f'; ctx.fillRect(kx, ky + 1, 7, 2); ctx.fillRect(kx, ky - 1, 1, 2); ctx.fillRect(kx + 3, ky - 1, 1, 2); ctx.fillRect(kx + 6, ky - 1, 1, 2);
+      ctx.fillStyle = '#ff3f6a'; ctx.fillRect(kx + 3, ky + 1, 1, 1);
+    }
+  }
   // cosmetic trail streaming up behind the duck while it sinks
   function drawTrail(ctx, cx, top) {
     const kind = O.skin.trail, len = 34;
@@ -2013,6 +2043,10 @@
       ctx.globalAlpha = a;
       if (kind === 'rainbow') { ['#ff3f6a', '#ff9a2a', '#ffe14a', '#7dff6a', '#4ad0ff', '#c58bff'].forEach((col, b) => { ctx.fillStyle = col; ctx.fillRect(Math.round(cx - 6 + b * 2 + wob), y, 2, 2); }); }
       else if (kind === 'fire') { ctx.fillStyle = k < 10 ? '#fff3b0' : k < 20 ? '#ffb020' : '#ff4d2a'; const w = Math.max(1, 8 - Math.floor(k / 5)); ctx.fillRect(Math.round(cx - w / 2 + wob), y, w, 2); }
+      else if (kind === 'bubble' && (k + Math.floor(O.t * 10)) % 5 === 0) { ctx.fillStyle = 'rgba(200,240,255,0.9)'; const bx = Math.round(cx + Math.sin(k + O.t * 4) * 4); ctx.fillRect(bx, y, 2, 2); }
+      else if (kind === 'confetti' && (k + Math.floor(O.t * 10)) % 3 === 0) { ctx.fillStyle = ['#ff3fb4', '#7dff6a', '#4ad0ff', '#ffe14a'][(k / 2) % 4]; ctx.fillRect(Math.round(cx + Math.sin(k * 2.1 + O.t * 5) * 6), y, 2, 1); }
+      else if (kind === 'money' && (k + Math.floor(O.t * 8)) % 8 === 0) { const rx = Math.round(cx - 6 + Math.sin(k * 1.3 + O.t * 3) * 6); ctx.globalAlpha = a; ctx.drawImage(sprite('robux').c, rx, y - 6, 8, 8); glow(ctx, rx + 4, y - 2, 6, [255, 255, 255], 0.15); }
+      else if (kind === 'aura') { const w = Math.max(2, 12 - Math.floor(k / 3)); ctx.fillStyle = k % 4 ? '#8a5cff' : '#1a0b2e'; ctx.fillRect(Math.round(cx - w / 2 + Math.sin(O.t * 7 + k * 0.5) * 2), y, w, 2); if (k % 6 === 0) glow(ctx, cx, y, 8, [160, 110, 255], 0.12); }
       else if (kind === 'sparkle' && (k + Math.floor(O.t * 12)) % 6 === 0) { ctx.fillStyle = k % 4 ? '#ffffff' : '#ffe14a'; const sx = Math.round(cx + Math.sin(k * 1.7 + O.t * 3) * 7); ctx.fillRect(sx, y - 1, 1, 3); ctx.fillRect(sx - 1, y, 3, 1); }
     }
     ctx.globalAlpha = 1;
@@ -2026,7 +2060,8 @@
     const bob = O.sinking ? 0 : Math.round(Math.sin(O.t * 2.2) * 1.5);
     const m = O.shrimpM;
     if (m > 800) glow(ctx, sx + 8, sy + 5, 18, [140, 220, 255], clamp((m - 800) / 3000, 0, 1) * 0.08);
-    const cs = sprite('duck' + frame, O.skin.duckTint); const k2 = 1;
+    const cs = sprite('duck' + frame, duckTint()); const k2 = 1;
+    duckFx(ctx, sx + cs.w / 2, Math.round(sy) + bob + cs.h / 2, 1);
     if (O.skin.trail && O.sinking) drawTrail(ctx, sx + cs.w / 2, Math.round(sy) + bob + 2);
     glow(ctx, sx + cs.w / 2, Math.round(sy) + bob + cs.h / 2, 12, [255, 214, 60], 0.18);
     ctx.drawImage(cs.c, sx, Math.round(sy) + bob, cs.w * k2, cs.h * k2);
