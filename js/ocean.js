@@ -44,6 +44,20 @@
   // ---------- sprites ----------
   // Each sprite: rows of chars, palette maps char -> color. '.' is transparent.
   const SPR = {
+    robux: { p: {'k': '#0a0c10', 'W': '#f4f6fa', 'w': '#c9ced8', 'h': '#ffffff'}, r: [
+      '....kkkk....',
+      '..kkhWWWkk..',
+      '.khWWWWWWwk.',
+      'khWWkkkkWWwk',
+      'kWWk....kWwk',
+      'kWWk....kWwk',
+      'kWWk....kWwk',
+      'kWWk....kWwk',
+      'kWWWkkkkWWwk',
+      '.kWWWWWWWwk.',
+      '..kkwwwwkk..',
+      '....kkkk....',
+    ] },
     // ---- floating junk, zone by zone ----
     partyMouseCF: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#7dff6a', 'c': '#ff3fb4', 'y': '#ffffff'}, r: [
       '......................y.........',
@@ -1574,9 +1588,9 @@
     const pick = arr => arr[Math.floor(rnd * arr.length) % arr.length];
     if (z === 0) return pick(['tpWad', 'tpWad', 'tpSheet', 'flossPick', 'qtip', 'gum', 'bandaid', 'soapBar', 'toothbrush', 'tpWad', 'duckling']);
     if (z === 1) return pick(['tpWad', 'ring', 'lego', 'keys', 'phone', 'coin', 'sock', 'airpod', 'goldfish', 'flossPick', 'duckling', 'tpSheet']);
-    if (z === 2) return pick(['mouse', 'mouse', 'rat', 'rat', 'pizza', 'gatorEyes', 'sludge', 'tpWad', 'coin', 'mouse']);
+    if (z === 2) return pick(['mouse', 'mouse', 'rat', 'rat', 'pizza', 'gatorEyes', 'tpWad', 'coin', 'mouse', 'tpSheet']);
     if (z === 3) return pick(['crownMouse', 'ratking', 'cheese', 'chain', 'crownMouse', 'coin', 'coin', 'rat', 'cheese', 'ratking']);
-    return pick(['partyMouse', 'partyMouse', 'disco', 'boombox', 'partyMouse', 'cheese', 'disco', 'auraBlob']);
+    return pick(['partyMouse', 'partyMouse', 'disco', 'boombox', 'partyMouse', 'cheese', 'disco', 'partyMouseB']);
   }
 
   function glow(ctx, x, y, r, col, a) {

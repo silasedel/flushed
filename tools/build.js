@@ -15,5 +15,9 @@ require('./families.js'); // look-alike prompt families for the picker
   const idx = path.join(__dirname, '..', 'index.html'), v = Date.now().toString(36);
   let html = fs.readFileSync(idx, 'utf8');
   html = html.replace(/((?:src|href)="(?:js|css|data)\/[^"?]+\.(?:js|css))(\?v=[^"]*)?"/g, `$1?v=${v}"`);
+  // the page knows its own version; game.js compares it with version.json (never cached) and reloads if stale
+  html = html.replace(/<script>window\.FLUSHED_V='[^']*';<\/script>\n?/, '');
+  html = html.replace('<script src="js/db.js', `<script>window.FLUSHED_V='${v}';</script>\n<script src="js/db.js`);
+  fs.writeFileSync(path.join(__dirname, '..', 'version.json'), JSON.stringify({ v }) + '\n');
   fs.writeFileSync(idx, html);
 }

@@ -18,16 +18,16 @@
   // Depth per answer scales so any length spans the same 0–7,000 m world (endless paces like a 10).
   const depthScale = () => 1; // depth follows points in every game length: ~400 pts = Rat Kingdom, ~500 = disco core, 600+ = insanity
   const lenName = l => (l ? `${l} PROMPTS` : 'ENDLESS');
-  // ---------- Flush Coins ----------
-  // Normal games pay 1 coin per 10 points. Ranked: buy in at the "market price", get paid 1 coin per 5 points.
-  // The market price sits ~10% above what an average player wins back, so beating the average = profit, and the
-  // house keeps a small edge overall. (On Roblox this becomes the in-game currency; see ROBLOX.md, "Money".)
-  const START_COINS = 100, NORMAL_RATE = 10, RANKED_RATE = 5, HOUSE_EDGE = 1.1, AVG_PER_PROMPT = 25.45;
+  // ---------- Pretend Robux (web prototype of the Roblox money loop) ----------
+  // You start with R$1,000. Normal games are free and pay nothing. Ranked: buy in at the "market price" for the
+  // number of prompts, get paid R$1 per 5 points. The price sits ~10% above what an average player wins back, so
+  // beating the average = profit and the house keeps a small edge. See ROBLOX.md, "Money" for the real-Roblox rules.
+  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 5, HOUSE_EDGE = 1.1, AVG_PER_PROMPT = 25.45;
   const rankedLen = () => (LENGTHS.includes(store.settings.len) && store.settings.len ? store.settings.len : 10);
   const marketPrice = len => Math.ceil((AVG_PER_PROMPT * len / RANKED_RATE) * HOUSE_EDGE);
-  const coinsFor = (score, ranked) => Math.floor(score / (ranked ? RANKED_RATE : NORMAL_RATE));
+  const coinsFor = (score, ranked) => (ranked ? Math.floor(score / RANKED_RATE) : 0);
   let coinImg = '';
-  const coinTag = n => `<span class="coin">${coinImg ? `<img class="pix coin-ico" src="${coinImg}" alt="">` : ''}${n}</span>`;
+  const coinTag = n => `<span class="coin">${coinImg ? `<img class="pix coin-ico" src="${coinImg}" alt="">` : ''}${Number(n).toLocaleString('en-US')}</span>`;
   const EPOCH = '2026-09-01'; // Daily Dive #1
   const PACKS = [
     { key: 'geography', name: 'Geography', blurb: 'Countries, capitals, rivers, peaks and every corner of the map.' },
@@ -218,7 +218,7 @@
     }
     if (mode === 'ranked') {
       const price = marketPrice(rankedLen());
-      if ((store.coins ?? START_COINS) < price) { toast(`Ranked costs ${price} coins. Play normal games to earn more.`); return; }
+      if ((store.coins ?? START_COINS) < price) { toast(`Ranked costs R$${price}. You're out of pretend Robux. Reset it in Settings.`); return; }
       store.coins = (store.coins ?? START_COINS) - price; Sound.click();
     }
     G = newGame(mode, key);
@@ -623,9 +623,9 @@
     drawDiveChart(entry);
     drawStack(entry);
     const cl = $('#res-coins');
-    if (entry.cheated) cl.innerHTML = 'Cheat code used · no coins this time';
+    if (entry.cheated) cl.innerHTML = 'Cheat code used · no Robux this time';
     else if (entry.ranked) { const net = (entry.coins || 0) - (entry.price || 0); cl.innerHTML = `Bought in ${coinTag(entry.price)} · paid out ${coinTag(entry.coins || 0)} · <b class="${net >= 0 ? 'up' : 'down'}">${net >= 0 ? '+' : ''}${net} ${net >= 0 ? 'profit' : 'loss'}</b>`; }
-    else cl.innerHTML = `+${coinTag(entry.coins || 0)} earned`;
+    else cl.innerHTML = `Free game · play <b>Ranked</b> to win Robux`;
     renderCoins();
     // bearing
     const n = countOf(entry), sc = n / 7, norm = entry.score / sc; // bands are written for 7 prompts
@@ -821,6 +821,7 @@
       <p class="fine">Games where you used a cheat code still count as played, but not toward your best or average.</p>
       <button class="btn btn-ghost small" id="btn-reset-stats">RESET STATISTICS</button>`;
   }
+  function resetRobux() { store.coins = START_COINS; save(); renderCoins(); toast('Pretend Robux reset to R$1,000'); }
   function openStats() {
     openModal('STATISTICS', statsHtml());
     $('#btn-reset-stats').addEventListener('click', () => {
@@ -842,7 +843,7 @@
       <h3 class="mh">KEYBOARD</h3>
       <ul class="keys"><li><kbd>Enter</kbd> flush · submit · keep flushing</li><li><kbd>M</kbd> menu · <kbd>Esc</kbd> close</li><li><kbd>S</kbd> toggle sound (outside the answer box)</li></ul>
       <p class="fine">Question database: <b>${fmt(QS.length)}</b> prompts · <b>${fmt(QS.reduce((n, q) => n + q.a.length, 0))}</b> accepted answers</p>
-      <button class="btn btn-ghost small danger" id="btn-wipe">ERASE ALL DATA</button>`);
+      <button class="btn btn-ghost small danger" id="btn-wipe">ERASE ALL DATA</button><button class="btn btn-ghost small" id="btn-reset-robux">RESET PRETEND ROBUX (R$1,000)</button>`);
     $('#set-sound').onchange = e => { s.sound = e.target.checked; applySettings(); save(); };
     $('#set-vol').oninput = e => { s.volume = Number(e.target.value); applySettings(); save(); };
     $('#set-vol').onchange = () => Sound.click();
@@ -850,6 +851,7 @@
     $('#set-motion').onchange = e => { s.motion = e.target.checked ? 'reduced' : 'full'; applySettings(); save(); };
     $('#set-meta').onchange = e => { s.showMeta = e.target.checked; save(); if (G) $('#q-meta').textContent = s.showMeta ? `${curQ().cat} · ${curQ().diff}`.toUpperCase() : ''; };
     $('#btn-wipe').onclick = () => confirmBox('Erase every flush, streak, statistic and setting on this device? This cannot be undone.', () => { try { localStorage.removeItem(SKEY); } catch (e) {} location.reload(); });
+    const rr = $('#btn-reset-robux'); if (rr) rr.addEventListener('click', resetRobux);
   }
   function applySettings() {
     const s = store.settings;
@@ -978,7 +980,7 @@
     const c = store.coins ?? START_COINS, price = marketPrice(rankedLen());
     $$('.coin-bal').forEach(el => { el.innerHTML = coinTag(c); });
     const rb = $('#btn-ranked');
-    if (rb) { rb.innerHTML = `RANKED · BUY IN ${coinTag(price)} <span class="rk-sub">pays 1 per ${RANKED_RATE} pts</span>`; rb.classList.toggle('poor', c < price); }
+    if (rb) { const L = rankedLen(); rb.innerHTML = `RANKED · ${L} PROMPTS · BUY IN ${coinTag(price)} <span class="rk-sub">pays R$1 per ${RANKED_RATE} pts · beat ${Math.round(price * RANKED_RATE)} to profit</span>`; rb.classList.toggle('poor', c < price); }
   }
   function renderLenPick() {
     const cur = LENGTHS.includes(store.settings.len) ? store.settings.len : 10;
@@ -1063,10 +1065,21 @@
   }
 
   // ---------- boot ----------
+  // GitHub Pages lets browsers reuse the page for ~10 minutes; if a newer version is live, reload once to get it.
+  function checkVersion() {
+    if (!window.FLUSHED_V || !window.fetch) return;
+    fetch('version.json?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(j => {
+      if (!j || !j.v || j.v === window.FLUSHED_V) return;
+      if (sessionStorage.getItem('flushed-reloaded') === j.v) return; // only try once per new version
+      sessionStorage.setItem('flushed-reloaded', j.v); location.reload();
+    }).catch(() => {});
+  }
   function boot() {
+    checkVersion();
     load();
     Ocean.init($('#ocean'));
-    try { coinImg = Ocean.sprite('coin').c.toDataURL(); } catch (e) { /* no sprite yet */ }
+    try { coinImg = Ocean.sprite('robux').c.toDataURL(); } catch (e) { /* no sprite yet */ }
+    if (store.robuxV !== 1) { store.robuxV = 1; store.coins = START_COINS; save(); } // switch to pretend Robux: everyone starts at R$1,000
     applySettings(); wire(); buildGauge(); renderCoins();
     if (!QS.length) { document.body.insertAdjacentHTML('beforeend', '<p style="position:fixed;bottom:8px;left:8px;color:#f66">Question database failed to load.</p>'); }
     // Reloading mid-game ends that game and starts a fresh one (endless runs with answers are saved first).
