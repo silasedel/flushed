@@ -30,6 +30,11 @@ Write NEW **easy** prompts only.
   Every prompt has at least one 10, 30, 60 and 85, and EXACTLY ONE 100 (the single least likely valid answer).
 - American spelling in prompts and canonical answers.
 
+## No fuzzy "famous" prompts
+Don't write "Name a famous/popular/well-known X" prompts: players name a real but niche X, it isn't in the list,
+and it feels unfair. Use criteria anyone can check instead ("Name a podcast with a video version on YouTube" is still fuzzy —
+better: "Name a country in Africa", "Name a Pixar movie", "Name an NFL team"), or a finite/complete set.
+
 ## File + ids
 Write ONLY your assigned file(s) in data/questions/ (named in your task), format exactly as BRIEF.md shows,
 `diff:"easy"`, `pack` = one of: geography, science, general, language, fun, pop, sports, gaming, music, movies.

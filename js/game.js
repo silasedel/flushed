@@ -109,7 +109,16 @@
   // Games only draw from prompts you've never seen; once those run low, the ones seen LONGEST ago come back first.
   // Within a game, two prompts of the same kind ("Name a fruit" / "Name a fruit that's red") never appear together.
   const kindOf = q => q.q.toLowerCase().replace(/^(name|give|list)\s+(a|an|any|one of the|one of|the|some)?\s*/, '').split(/[^a-z]+/)[0];
-  function markSeen(id) { store.seen = store.seen || {}; store.seenN = (store.seenN || 0) + 1; store.seen[id] = store.seenN; }
+  function markSeen(id) {
+    store.seen = store.seen || {}; store.seenN = (store.seenN || 0) + 1; store.seen[id] = store.seenN;
+    const q = BY_ID.get(id); if (!q) return;
+    store.recentGroups = [...(store.recentGroups || []).filter(g => g !== groupOf(q)), groupOf(q)].slice(-30); // ~3 games of memory
+  }
+  // Look-alike groups: prompts whose answers mostly overlap share a family (data/families.js);
+  // otherwise group by the thing being named ("fruit", "country"...).
+  const FAMILY = window.KRILLION.family || {};
+  const isFamous = q => /\b(famous|popular|well[- ]known|notable|celebrit\w*|iconic|legendary)\b/i.test(q.q);
+  const groupOf = q => (FAMILY[q.id] ? 'f' + FAMILY[q.id] : 'k:' + kindOf(q));
   function randomIds(pack, n = PER_GAME, exclude = []) {
     const seen = store.seen || {}; const ex = new Set(exclude);
     const fits = q => (pack ? q.pack === pack : casualOK(q));
@@ -122,20 +131,39 @@
       fresh = unseen.concat(old.slice(0, Math.max(n * 6, 40)));
     }
     const sh = shuffle(fresh); const picks = [];
-    if (pack) {
-      for (const want of PACK_MIX) { for (const w of FALLBACK[want]) { const q = sh.find(x => x.diff === w && !picks.includes(x)); if (q) { picks.push(q); break; } } }
-    } else {
-      const allowVague = Math.random() < 1 / 3; // "Name something that…" only in about a third of dives
-      const ok = x => casualOK(x) && !picks.includes(x) && !(kindOf(x) && picks.some(p => kindOf(p) === kindOf(x))) && !(isVague(x) && (!allowVague || picks.some(isVague)));
-      for (let tries = 0; picks.length < n && tries < 60; tries++) {
-        const ent = picks.filter(q => ENTERTAINMENT.includes(q.pack)).length;
-        const p = pickPack(Math.random, new Set(ent >= 2 ? ENTERTAINMENT : []));
-        const q = sh.find(x => x.pack === p && ok(x)); if (q) picks.push(q);
+    const recentG = new Set(store.recentGroups || []); // groups served in your last few games
+    const inGame = new Set(exclude.map(id => BY_ID.get(id)).filter(Boolean).map(groupOf).slice(-12));
+    const allowVague = Math.random() < 1 / 3; // "Name something that…" only in about a third of games
+    const allowFamous = Math.random() < 0.35; // "Name a famous…" prompts are fuzzy (what counts as famous?), so keep them rare
+    // strictness 2: new group in this game AND not played recently; 1: new group in this game; 0: anything
+    const ok = (x, strict) => !picks.includes(x) && (pack || casualOK(x))
+      && (strict < 1 || (!picks.some(p => groupOf(p) === groupOf(x)) && !inGame.has(groupOf(x))))
+      && (strict < 2 || !recentG.has(groupOf(x)))
+      && (pack || !(isVague(x) && (!allowVague || picks.some(isVague))))
+      && (pack || !(isFamous(x) && (!allowFamous || picks.some(isFamous))));
+    for (const strict of [2, 1, 0]) {
+      if (pack) {
+        for (const want of PACK_MIX) { if (picks.length >= n) break; for (const w of FALLBACK[want]) { const q = sh.find(x => x.diff === w && ok(x, strict)); if (q) { picks.push(q); break; } } }
+      } else {
+        for (let tries = 0; picks.length < n && tries < 60; tries++) {
+          const ent = picks.filter(q => ENTERTAINMENT.includes(q.pack)).length;
+          const p = pickPack(Math.random, new Set(ent >= 2 ? ENTERTAINMENT : []));
+          const q = sh.find(x => x.pack === p && ok(x, strict)); if (q) picks.push(q);
+        }
       }
-      for (const q of sh) { if (picks.length >= n) break; if (ok(q)) picks.push(q); }
+      for (const q of sh) { if (picks.length >= n) break; if (ok(q, strict)) picks.push(q); }
+      if (picks.length >= n) break;
     }
-    for (const q of sh) { if (picks.length >= n) break; if (!picks.includes(q)) picks.push(q); }
-    return shuffle(picks).map(q => q.id);
+    // order them so the same topic never comes twice in a row (when there's any way around it)
+    // (always take next from the topic with the most left that isn't the one just played)
+    const byPack = new Map(); for (const q of shuffle(picks)) { if (!byPack.has(q.pack)) byPack.set(q.pack, []); byPack.get(q.pack).push(q); }
+    const order = []; let prev = exclude.length ? (BY_ID.get(exclude[exclude.length - 1]) || {}).pack : null;
+    while (order.length < picks.length) {
+      const packs = [...byPack.entries()].filter(([, l]) => l.length).sort((x, y) => y[1].length - x[1].length || Math.random() - 0.5);
+      const pick = packs.find(([p]) => p !== prev) || packs[0];
+      order.push(pick[1].pop()); prev = pick[0];
+    }
+    return order.map(q => q.id);
   }
 
   // ---------- persistence ----------
