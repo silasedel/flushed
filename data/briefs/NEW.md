@@ -38,7 +38,8 @@ better: "Name a country in Africa", "Name a Pixar movie", "Name an NFL team"), o
 ## No subjective free-form prompts
 Don't write prompts whose answers are free-form phrases or opinions: "What would a pick me say?", excuses, things people
 say/text/comment/yell, red/green flags, pet peeves, reasons for social behavior, "what would you do with...". Players type
-any sentence and it can't be judged fairly. Prompts must have answers that are nameable THINGS (objects, places, people,
+any sentence and it can't be judged fairly. Same for open word/phrase prompts: compound words, "a word or phrase with X in it", idioms/sayings, "a word that goes
+before/after X". Prompts must have answers that are nameable THINGS (objects, places, people,
 words in a clear category, concrete causes/parts).
 
 ## File + ids
