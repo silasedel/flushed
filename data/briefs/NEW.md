@@ -35,6 +35,12 @@ Don't write "Name a famous/popular/well-known X" prompts: players name a real bu
 and it feels unfair. Use criteria anyone can check instead ("Name a podcast with a video version on YouTube" is still fuzzy —
 better: "Name a country in Africa", "Name a Pixar movie", "Name an NFL team"), or a finite/complete set.
 
+## No subjective free-form prompts
+Don't write prompts whose answers are free-form phrases or opinions: "What would a pick me say?", excuses, things people
+say/text/comment/yell, red/green flags, pet peeves, reasons for social behavior, "what would you do with...". Players type
+any sentence and it can't be judged fairly. Prompts must have answers that are nameable THINGS (objects, places, people,
+words in a clear category, concrete causes/parts).
+
 ## File + ids
 Write ONLY your assigned file(s) in data/questions/ (named in your task), format exactly as BRIEF.md shows,
 `diff:"easy"`, `pack` = one of: geography, science, general, language, fun, pop, sports, gaming, music, movies.

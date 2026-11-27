@@ -70,7 +70,8 @@
   const DIFF_RANK = { easy: 0, medium: 1, hard: 2 };
 
   // ---------- question pool ----------
-  const QS = (window.KRILLION.questions || []).slice().sort((a, b) => a.id < b.id ? -1 : 1);
+  const REMOVED = new Set(window.KRILLION.removed || []); // too-subjective prompts (data/removed.js)
+  const QS = (window.KRILLION.questions || []).filter(q => !REMOVED.has(q.id)).sort((a, b) => a.id < b.id ? -1 : 1);
   // difficulty re-rated for a casual teen / young-adult audience (data/difficulty.js)
   const DIFF_OVERRIDE = window.KRILLION.difficulty || {};
   QS.forEach(q => { if (DIFF_OVERRIDE[q.id]) q.diff = DIFF_OVERRIDE[q.id]; });
