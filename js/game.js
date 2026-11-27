@@ -480,7 +480,7 @@
       // rarity threshold lines below where this answer started sinking
       if (G && document.body.classList.contains('sinking')) {
         for (const el of document.querySelectorAll('#tier-lines .tl')) {
-          const y = Ocean.depthToScreenY((G.sinkFrom || 0) + Number(el.dataset.d));
+          const y = Ocean.depthToScreenY((G.sinkFrom || 0) + Number(el.dataset.d) * depthScale(lenOf(G))); // same scale the duck sinks by
           el.style.display = y < -20 || y > H + 20 ? 'none' : ''; el.style.transform = `translateY(${Math.round(y)}px)`;
         }
       }

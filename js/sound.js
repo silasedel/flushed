@@ -34,6 +34,20 @@
     src.connect(f); f.connect(g); g.connect(master); src.start(t);
   }
 
+  // Underwater rush: noise through a low-pass whose cutoff wobbles (the swirl), swelling then fading.
+  function murk(dur, { vol = 0.2, at = 0, freq = 520, wobble = 260, rate = 3.2 } = {}) {
+    const a = ctx(); if (!a || !S.enabled) return;
+    const t = a.currentTime + at;
+    const buf = a.createBuffer(1, Math.ceil(a.sampleRate * dur), a.sampleRate);
+    const d = buf.getChannelData(0); let last = 0;
+    for (let i = 0; i < d.length; i++) { last = last * 0.82 + (Math.random() * 2 - 1) * 0.18; d[i] = last * 3; } // brownish noise = water, not hiss
+    const src = a.createBufferSource(); src.buffer = buf;
+    const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(freq, t); f.Q.value = 4;
+    const lfo = a.createOscillator(), lg = a.createGain(); lfo.frequency.value = rate; lg.gain.value = wobble; lfo.connect(lg); lg.connect(f.frequency);
+    f.frequency.exponentialRampToValueAtTime(Math.max(120, freq * 0.45), t + dur);
+    const g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + Math.min(0.35, dur * 0.3)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(master); src.start(t); lfo.start(t); lfo.stop(t + dur + 0.05);
+  }
   const NOTES = { 10: [523], 15: [523, 659], 30: [523, 659, 784], 60: [523, 659, 784, 1047], 85: [587, 740, 880, 1175, 1480], 100: [523, 659, 784, 1047, 1319, 1568, 2093] };
   const Sound = {
     settings: S,
@@ -50,7 +64,13 @@
     dup() { tone(330, 0.07, { vol: 0.1 }); tone(330, 0.07, { at: 0.1, vol: 0.1 }); },
     correct(score) { (NOTES[score] || NOTES[10]).forEach((f, i) => tone(f, 0.14, { at: i * 0.075, vol: 0.15, type: i % 2 ? 'square' : 'triangle' })); },
     miss() { [392, 330, 262].forEach((f, i) => tone(f, 0.16, { at: i * 0.1, vol: 0.12, type: 'triangle' })); },
-    descend(ms) { noise(Math.max(0.5, ms / 1000), { vol: 0.08, freq: 900, sweep: -800, q: 0.7 }); for (let i = 0; i < 6; i++) tone(700 + Math.random() * 900, 0.04, { at: Math.random() * (ms / 1000), vol: 0.05, type: 'sine', slide: 300 }); },
+    descend(ms) { // getting flushed underwater: a wobbling rush, a deep rumble, and bubbles glugging past
+      const s = Math.max(0.6, ms / 1000);
+      murk(s + 0.3, { vol: 0.32, freq: 700, wobble: 320, rate: 2.6 });
+      tone(70, s, { type: 'sine', vol: 0.16, slide: -30, attack: 0.15 });
+      const n = Math.round(6 + s * 5);
+      for (let i = 0; i < n; i++) tone(180 + Math.random() * 380, 0.07 + Math.random() * 0.05, { at: Math.random() * s, vol: 0.07, type: 'sine', slide: 220 + Math.random() * 300, attack: 0.01 });
+    },
     flush() { // toilet flush: a rushing swirl, a gurgle, then the drop
       noise(2.3, { vol: 0.13, freq: 1300, sweep: -1000, q: 0.8 });
       for (let i = 0; i < 9; i++) tone(260 + Math.random() * 380, 0.06, { at: 0.35 + i * 0.11, vol: 0.06, type: 'sine', slide: -160 });
