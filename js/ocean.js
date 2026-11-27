@@ -1450,7 +1450,8 @@
   }
   const gameAnchor = () => window.innerWidth < 700 ? 0.74 : 0.62;
   const shrimpWorld = () => O.shrimpM + OFF; // shrimp floats a little below the surface at 0 m
-  const shrimpX = () => Math.round(O.W * (O.sxf !== undefined ? O.sxf : (window.innerWidth < 700 ? 0.08 : 0.1)));
+  const midX = () => (O.W / 2 - 8) / O.W; // the duck's home: dead center of the drain
+  const shrimpX = () => Math.round(O.W * (O.sxf !== undefined ? O.sxf : midX()));
 
   // ---------- drawing ----------
   function disc(ctx, cx, cy, r) { for (let y = -r; y <= r; y++) { const w = Math.floor(Math.sqrt(r * r - y * y)); ctx.fillRect(cx - w, cy + y, w * 2 + 1, 1); } }
@@ -1709,29 +1710,22 @@
   // walls that keep closing in the deeper you go. Nothing fades in; it's all terrain.
   const PIPE_TOP = 110, SEWER_TOP = 1000;
   const smooth = (a, b, x) => { const q = clamp((x - a) / (b - a), 0, 1); return q * q * (3 - 2 * q); };
-  function pipeW(d) { return O.W * (0.06 + 0.13 * smooth(PIPE_TOP, 330, d) + 0.03 * smooth(330, SEWER_TOP, d)) * smooth(PIPE_TOP - 40, PIPE_TOP + 60, d); }
+  // vertical drain pipes along both edges: [x as a fraction of the width, thickness, where it comes out of the wall (m), where it ends (m)]
+  const PIPES = [[0.018, 10, 120, 1090], [0.07, 6, 170, 1050], [0.93, 7, 145, 1070], [0.978, 10, 120, 1110]];
+  function pipeW(d) { return d < PIPE_TOP ? 0 : O.W * 0.07 + 8; } // how much of each edge the pipes take (for clipping floaters)
   function sewerW(d, side) {
     const n = Math.sin(d * (side ? 0.027 : 0.031) + side * 2) * 6 + Math.sin(d * (side ? 0.09 : 0.11)) * 3;
-    const w = O.W * (0.2 + 0.1 * clamp((d - SEWER_TOP) / 5000, 0, 1)) + n * smooth(SEWER_TOP, SEWER_TOP + 200, d);
+    const w = O.W * (0.2 + 0.1 * clamp((d - SEWER_TOP) / 5000, 0, 1)) + n;
     return w;
   }
   function drawTrench(ctx) {
     const ppm = O.ppm;
-    const yStart = (PIPE_TOP - 40 + OFF - O.topM) * ppm; if (yStart > O.H) return;
+    const yStart = (PIPE_TOP - 40 + OFF - O.topM) * ppm; if (yStart > O.H) return; // eslint-disable-line
     const floorM = 7120 + OFF; const yFloor = (floorM - O.topM) * ppm;
     const W = O.W;
     for (let y = Math.max(0, Math.floor(yStart)); y < O.H; y += 2) {
       const m = O.topM + y / ppm, d = dz(m);
-      if (d < SEWER_TOP) { // the pipe: round metal walls, lit near the inside edge, dark lip where they meet the water
-        const w = Math.round(pipeW(d)); if (w < 1) continue;
-        for (const side of [0, 1]) {
-          const X = x => side ? W - x - 1 : x, R = (x0, ww, col) => { ctx.fillStyle = col; ctx.fillRect(side ? W - x0 - ww : x0, y, ww, 2); };
-          R(0, w, '#3a434c'); R(Math.round(w * 0.45), Math.round(w * 0.35), '#4f5a65'); R(Math.round(w * 0.62), Math.max(1, Math.round(w * 0.14)), '#66737f');
-          R(w - 2, 1, '#9aa6b1'); R(w - 1, 1, '#c3ccd4'); R(w, 1, '#1a1f24');
-          if (hash(Math.floor(d / 2) + side * 77) > 0.93) R(Math.round(w * (0.2 + hash(Math.floor(d) + side) * 0.5)), 1, '#7a5a3a'); // rust streak
-        }
-        continue;
-      }
+      if (d < SEWER_TOP) continue; // above the sewer the edges are just the drain pipes (drawn below)
       const zc = wallColors(d);
       for (const side of [0, 1]) {
         const wl = Math.max(0, sewerW(d, side));
@@ -1741,31 +1735,13 @@
       if (hash(Math.floor(m) + 77) > 0.985) { const wr = sewerW(d, 1), gx = W - wr * (0.3 + hash(Math.floor(m)) * 0.5); glow(ctx, gx, y, 4, [125, 255, 106], 0.3 + 0.2 * Math.sin(O.t * 2 + m)); ctx.fillStyle = '#c8ffbf'; ctx.fillRect(Math.round(gx), y, 1, 1); }
       if (hash(Math.floor(m) + 41) > 0.985) { const wl = sewerW(d, 0), gx = wl * (0.3 + hash(Math.floor(m) + 3) * 0.5); glow(ctx, gx, y, 4, [255, 143, 209], 0.3 + 0.2 * Math.sin(O.t * 2.3 + m)); ctx.fillStyle = '#ffc4ea'; ctx.fillRect(Math.round(gx), y, 1, 1); }
     }
-    // pipe flanges: bolted rings every 90 m
-    for (let fd = Math.ceil((dz(O.topM) - 10) / 90) * 90; fd < SEWER_TOP; fd += 90) {
-      if (fd < PIPE_TOP + 60) continue;
-      const y = Math.round((fd + OFF - O.topM) * ppm); if (y > O.H + 6) break; if (y < -6) continue;
-      const w = Math.round(pipeW(fd)) + 3;
-      for (const side of [0, 1]) {
-        const x0 = side ? W - w : 0;
-        ctx.fillStyle = '#5d6872'; ctx.fillRect(x0, y, w, 5); ctx.fillStyle = '#9aa6b1'; ctx.fillRect(x0, y, w, 1); ctx.fillStyle = '#2a3036'; ctx.fillRect(x0, y + 4, w, 1);
-        ctx.fillStyle = '#c3ccd4'; for (let bx = 4; bx < w - 2; bx += 9) ctx.fillRect(side ? W - bx - 1 : bx, y + 2, 1, 1);
-      }
-    }
-    // the collar where the pipe drops into the sewer
-    const yc = Math.round((SEWER_TOP + OFF - O.topM) * ppm);
-    if (yc > -14 && yc < O.H + 14) for (const side of [0, 1]) {
-      const w = Math.round(Math.max(pipeW(SEWER_TOP - 1), sewerW(SEWER_TOP, side))) + 6, x0 = side ? W - w : 0;
-      ctx.fillStyle = '#2a3036'; ctx.fillRect(x0, yc - 6, w, 12); ctx.fillStyle = '#6e7b86'; ctx.fillRect(x0, yc - 6, w, 2);
-      ctx.fillStyle = '#4c5660'; ctx.fillRect(x0, yc - 4, w, 7); ctx.fillStyle = '#c3ccd4'; for (let bx = 3; bx < w - 2; bx += 7) ctx.fillRect(side ? W - bx - 1 : bx, yc - 1, 1, 1);
-      ctx.fillStyle = 'rgba(125,255,106,0.5)'; ctx.fillRect(side ? x0 + 4 : w - 8, yc + 6, 2, 4); // slime drip off the collar
-    }
+    drawPipes(ctx);
     // sewer bricks: staggered rows, lit top edge, slime and gold drips
     const BH = 10, BW = 20;
     const r0 = Math.floor((O.topM * ppm) / BH) - 1, r1 = Math.ceil(((O.topM * ppm) + O.H) / BH) + 1;
     for (let r = r0; r <= r1; r++) {
       const yb = Math.round(r * BH - O.topM * ppm); const m = O.topM + (yb + BH / 2) / ppm, d = dz(m);
-      if (d < SEWER_TOP + 8) continue;
+      if (d < SEWER_TOP) continue;
       for (const side of [0, 1]) {
         const wall = sewerW(d, side);
         const off = (r % 2) * (BW / 2);
@@ -1782,7 +1758,54 @@
         }
       }
     }
+    // the sewer starts at a brick archway: a thick lintel across each wall with a keystone, pipes pour out below it
+    const ya = Math.round((SEWER_TOP + OFF - O.topM) * ppm);
+    if (ya > -20 && ya < O.H + 20) for (const side of [0, 1]) {
+      const w = Math.round(sewerW(SEWER_TOP, side)) + 10, x0 = side ? W - w : 0, zc = wallColors(SEWER_TOP + 50);
+      ctx.fillStyle = zc[3]; ctx.fillRect(x0, ya - 12, w, 14);
+      for (let bx = 0; bx < w; bx += 12) { ctx.fillStyle = zc[0]; ctx.fillRect(side ? W - bx - 11 : bx, ya - 11, 11, 5); ctx.fillRect(side ? W - bx - 5 - 11 : bx + 5, ya - 5, 11, 5); }
+      ctx.fillStyle = zc[1]; ctx.fillRect(x0, ya - 12, w, 1);
+      ctx.fillStyle = zc[2]; ctx.fillRect(side ? x0 : w - 7, ya - 14, 7, 16); // keystone at the inner corner
+    }
     drawLedges(ctx);
+  }
+  function drawPipes(ctx) {
+    const ppm = O.ppm, W = O.W;
+    const Y = m => Math.round((m + OFF - O.topM) * ppm);
+    PIPES.forEach(([fx, w, top, bot], i) => {
+      const x = Math.round(W * fx - w / 2), right = fx > 0.5;
+      const y0 = Y(top), y1 = Y(bot); if (y1 < -10 || y0 > O.H + 10) return;
+      const ya = Math.max(-2, y0), yb = Math.min(O.H + 2, y1);
+      // the pipe body with a round highlight
+      ctx.fillStyle = '#4c5660'; ctx.fillRect(x, ya, w, yb - ya);
+      ctx.fillStyle = '#6e7b86'; ctx.fillRect(x + 1, ya, 2, yb - ya);
+      ctx.fillStyle = '#323a41'; ctx.fillRect(x + w - 2, ya, 2, yb - ya);
+      // flanged joints with rivets, fixed to the world so they scroll with it
+      for (let m = top + 40 + i * 9; m < bot - 10; m += 60) {
+        const y = Y(m); if (y < -6 || y > O.H + 6) continue;
+        ctx.fillStyle = '#5d6872'; ctx.fillRect(x - 2, y, w + 4, 4);
+        ctx.fillStyle = '#88949f'; ctx.fillRect(x - 2, y, w + 4, 1);
+        ctx.fillStyle = '#2a3036'; ctx.fillRect(x - 1, y + 2, 1, 1); ctx.fillRect(x + w, y + 2, 1, 1);
+      }
+      // top: an elbow that bends back into the wall it comes out of
+      if (y0 > -20 && y0 < O.H + 20) {
+        const ex0 = right ? x : 0, ew = right ? W - x : x + w;
+        ctx.fillStyle = '#4c5660'; ctx.fillRect(ex0, y0 - w, ew, w);
+        ctx.fillStyle = '#6e7b86'; ctx.fillRect(ex0, y0 - w + 1, ew, 2);
+        ctx.fillStyle = '#323a41'; ctx.fillRect(ex0, y0 - 2, ew, 2);
+        ctx.fillStyle = '#5d6872'; ctx.fillRect(right ? x : x + w - 1, y0 - w - 1, 2, w + 2); // bend seam
+      }
+      // bottom: an open mouth with a lip, pouring a little stream of sewer water
+      if (y1 > -20 && y1 < O.H + 20) {
+        ctx.fillStyle = '#5d6872'; ctx.fillRect(x - 2, y1 - 3, w + 4, 4); ctx.fillStyle = '#88949f'; ctx.fillRect(x - 2, y1 - 3, w + 4, 1);
+        ctx.fillStyle = '#12171b'; ctx.fillRect(x + 1, y1, w - 2, 1);
+        for (let k = 0; k < 10; k++) {
+          const sy = y1 + 1 + ((O.t * 40 + k * 7 + i * 5) % 30);
+          ctx.fillStyle = k % 3 ? 'rgba(125,190,150,0.55)' : 'rgba(200,255,210,0.7)';
+          ctx.fillRect(x + Math.round(w / 2) - 1 + Math.round(Math.sin(k + O.t * 3) * 0.6), Math.round(sy), 2, 2);
+        }
+      }
+    });
   }
 
   // Ledges: bricks jutting out of the tunnel walls with things sitting on them. Sparse in the sewer,
@@ -1992,7 +2015,7 @@
       for (let i = 0; i < 18; i++) O.bubbles.push({ x: shrimpX() + Math.random() * 16, y: (shrimpWorld() - O.topM) * O.ppm, vy: -(10 + Math.random() * 30), life: 1.6, big: Math.random() < 0.5 });
     }
     // shrimp glides between its idle spot and center stage during a descent
-    const sxTarget = O.sxTarget !== null && O.sxTarget !== undefined ? O.sxTarget : (window.innerWidth < 700 ? 0.08 : 0.1);
+    const sxTarget = O.sxTarget !== null && O.sxTarget !== undefined ? O.sxTarget : midX();
     O.sxf = O.sxf === undefined ? sxTarget : O.sxf + (sxTarget - O.sxf) * (O.reduced ? 1 : 1 - Math.exp(-dt * 3));
     const target = viewTop();
     const prev = O.topM;
@@ -2051,7 +2074,7 @@
     get depth() { return O.shrimpM; },
     burst(n = 10) { for (let i = 0; i < n; i++) O.bubbles.push({ x: shrimpX() + Math.random() * 16, y: (shrimpWorld() - O.topM) * O.ppm, vy: -(12 + Math.random() * 20), life: 2, big: Math.random() < 0.5 }); },
     set onDepth(fn) { O.onDepth = fn; },
-    setShrimpX(f) { O.sxTarget = f; },
+    setShrimpX(f) { O.sxTarget = f === 0.5 ? midX() : f; },
     // CSS-pixel screen position helpers for DOM overlays
     depthToScreenY(d) { return ((OFF + d) - O.topM) * O.ppm * O.scale; },
     screenYToDepth(y) { return y / (O.ppm * O.scale) + O.topM - OFF; },
