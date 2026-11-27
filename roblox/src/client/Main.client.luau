@@ -93,32 +93,11 @@ local function call(action, args)
 	return res
 end
 
----------------------------------------------------------------- background: the sewer gets deeper as you score
-local bg = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = gui })
-local grad = make("UIGradient", { Rotation = 90, Parent = bg })
-local ZONES = { -- points: top color, bottom color (the user's zones: rat kingdom ~400, disco ~500, rainbow 600+)
-	{ 0, Color3.fromHex("#bfe9ff"), Color3.fromHex("#5fa8d3") }, -- bowl water
-	{ 150, Color3.fromHex("#4f6b5a"), Color3.fromHex("#2a3a30") }, -- pipes
-	{ 300, Color3.fromHex("#3d4a2f"), Color3.fromHex("#1c2416") }, -- deep sewer
-	{ 400, Color3.fromHex("#6b3a1c"), Color3.fromHex("#2a140a") }, -- rat kingdom (torches)
-	{ 500, Color3.fromHex("#5a1f8a"), Color3.fromHex("#1d0838") }, -- disco core
-}
-local depth, rainbow = 0, false
-local function setDepth(points)
-	depth = points
-	rainbow = points >= 600
-	if rainbow then return end
-	local z = ZONES[1]
-	for _, zz in ZONES do if points >= zz[1] then z = zz end end
-	grad.Color = ColorSequence.new(z[2], z[3])
-end
-setDepth(0)
-RunService.RenderStepped:Connect(function()
-	if rainbow then
-		local t = os.clock() * 0.25
-		grad.Color = ColorSequence.new(Color3.fromHSV(t % 1, 0.75, 0.85), Color3.fromHSV((t + 0.3) % 1, 0.8, 0.45))
-	end
-end)
+---------------------------------------------------------------- the pixel-art world (Scene.luau): bowl, flush, sewer dive
+local Scene = require(script.Parent.Scene)
+Scene.init(gui)
+local ALL_ITEMS = table.clone(Config.SHOP)
+for _, s in Config.ROBUX_PASSES do table.insert(ALL_ITEMS, s) end
 
 -- coins in the corner
 local coinCorner = label({ Parent = gui, Size = UDim2.new(0, 170, 0, 36), Position = UDim2.new(1, -12, 0, 12), AnchorPoint = Vector2.new(1, 0), Max = 22, ZIndex = 5 })
@@ -155,27 +134,7 @@ local titleText = label({ Parent = T, Text = "FLUSHED", Font = TITLE_FONT, Size 
 stroke(titleText, 4)
 local sub = label({ Parent = T, Text = "25 seconds a prompt · rarer answers flush you deeper", Size = UDim2.new(1, 0, 0.05, 0), Position = UDim2.fromScale(0, 0.16), Max = 20 })
 stroke(sub, 2)
-local toilet = label({ Parent = T, Text = "🚽", Size = UDim2.new(0.3, 0, 0.2, 0), Position = UDim2.fromScale(0.5, 0.22), AnchorPoint = Vector2.new(0.5, 0), Max = 120 })
-local duck = label({ Parent = T, Text = "🦆", Size = UDim2.new(0.12, 0, 0.09, 0), Position = UDim2.fromScale(0.5, 0.24), AnchorPoint = Vector2.new(0.5, 0), Max = 56, ZIndex = 2 })
--- uploaded pixel art (Config.IMAGES) replaces the emoji and can be tinted by the equipped skin
-local function artOver(lbl, id)
-	if id == "" then return nil end
-	local img = make("ImageLabel", { Parent = lbl, BackgroundTransparency = 1, Image = id, Size = UDim2.fromScale(1, 1), ScaleType = Enum.ScaleType.Fit, ResampleMode = Enum.ResamplerMode.Pixelated, ZIndex = lbl.ZIndex })
-	lbl.TextTransparency = 1
-	return img
-end
-local toiletImg = artOver(toilet, Config.IMAGES.toilet)
-local duckImg = artOver(duck, Config.IMAGES.duck)
-local skinLabel = label({ Parent = T, Text = "", Size = UDim2.new(1, 0, 0.035, 0), Position = UDim2.fromScale(0, 0.42), Max = 16, TextColor3 = DIM })
-task.spawn(function() -- the duck bobs in the bowl
-	while true do
-		TweenService:Create(duck, TweenInfo.new(1.1, Enum.EasingStyle.Sine), { Rotation = 8, Position = UDim2.fromScale(0.5, 0.235) }):Play()
-		task.wait(1.1)
-		TweenService:Create(duck, TweenInfo.new(1.1, Enum.EasingStyle.Sine), { Rotation = -8, Position = UDim2.fromScale(0.5, 0.245) }):Play()
-		task.wait(1.1)
-	end
-end)
-
+local skinLabel = label({ Parent = T, Text = "", Size = UDim2.new(1, 0, 0.03, 0), Position = UDim2.fromScale(0, 0.435), Max = 15, TextColor3 = DIM })
 local lenRow = make("Frame", { Parent = T, BackgroundTransparency = 1, Size = UDim2.new(0.7, 0, 0.065, 0), Position = UDim2.fromScale(0.5, 0.47), AnchorPoint = Vector2.new(0.5, 0) }, {
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
 })
@@ -214,9 +173,7 @@ local function renderTitle()
 	local t = itemById(profile.equip.toilet or "")
 	skinLabel.Text = (d and d.name or "Classic Duck") .. "  ·  " .. (t and t.name or "Classic Toilet")
 	skinLabel.TextColor3 = d and Color3.fromHex(d.color) or DIM
-	toilet.TextColor3 = t and Color3.fromHex(t.color) or INK
-	if duckImg then duckImg.ImageColor3 = d and Color3.fromHex(d.color) or Color3.new(1, 1, 1) end
-	if toiletImg then toiletImg.ImageColor3 = t and Color3.fromHex(t.color) or Color3.new(1, 1, 1) end
+	Scene.setSkin(profile.equip, ALL_ITEMS)
 end
 for L, b in lenButtons do b.Activated:Connect(function() len = L; renderTitle() end) end
 
@@ -245,6 +202,8 @@ local endBtn = button({ Parent = P, Text = "END RUN", Size = UDim2.new(0.25, 0, 
 local reveal = make("Frame", { Parent = P, Size = UDim2.new(1, 0, 0.36, 0), Position = UDim2.fromScale(0, 0.56), BackgroundColor3 = PANEL, BackgroundTransparency = 0.1, BorderSizePixel = 0, Visible = false })
 stroke(reveal, 3, INK)
 local tierLabel = label({ Parent = reveal, Text = "", Font = TITLE_FONT, Size = UDim2.new(1, -20, 0.3, 0), Position = UDim2.new(0, 10, 0.04, 0), Max = 52 })
+local tierIcon = make("Frame", { Parent = reveal, BackgroundTransparency = 1, Size = UDim2.new(0.3, 0, 0.3, 0), Position = UDim2.new(0, 10, 0.04, 0), ZIndex = 2 })
+make("UIAspectRatioConstraint", { Parent = tierIcon })
 stroke(tierLabel, 3)
 local answerLabel = label({ Parent = reveal, Text = "", Size = UDim2.new(1, -20, 0.17, 0), Position = UDim2.new(0, 10, 0.34, 0), Max = 26 })
 local blurbLabel = label({ Parent = reveal, Text = "", Size = UDim2.new(1, -20, 0.12, 0), Position = UDim2.new(0, 10, 0.51, 0), Max = 18, TextColor3 = DIM, Font = Enum.Font.Gotham })
@@ -298,7 +257,12 @@ local function showReveal(res)
 	othersLabel.Text = table.concat(parts, "   ·   ")
 	nextBtn.Text = res.last and "RESULTS ▶" or "NEXT ▶"
 	reveal.Visible = true
-	setDepth(res.total)
+	if res.result == "hit" then Scene.sink(res.score) end
+	for _, c in tierIcon:GetChildren() do c:Destroy() end
+	if res.result == "hit" then
+		local ico = Scene.tierIcon(res.score, math.max(48, tierIcon.AbsoluteSize.Y))
+		ico.AnchorPoint = Vector2.new(0.5, 0.5); ico.Position = UDim2.fromScale(0.5, 0.5); ico.Parent = tierIcon
+	end
 end
 
 ---------------------------------------------------------------- RESULTS
@@ -342,7 +306,8 @@ local function showResults(res)
 	for i, r in res.rows do
 		local t = Match.tierOf(r.score)
 		local f = make("Frame", { Parent = resList, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), LayoutOrder = i })
-		label({ Parent = f, Text = r.prompt, Size = UDim2.new(0.55, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, Font = Enum.Font.Gotham })
+		if r.score > 0 then local ico = Scene.tierIcon(r.score, 40); ico.Position = UDim2.fromOffset(0, 3); ico.Parent = f end
+		label({ Parent = f, Text = r.prompt, Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromOffset(48, 0), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, Font = Enum.Font.Gotham })
 		label({ Parent = f, Text = r.answer, Size = UDim2.new(0.28, 0, 1, 0), Position = UDim2.fromScale(0.56, 0), TextXAlignment = Enum.TextXAlignment.Left, Max = 16 })
 		local s = label({ Parent = f, Text = r.score > 0 and (t.name .. " +" .. r.score) or "+0", Size = UDim2.new(0.16, 0, 1, 0), Position = UDim2.fromScale(0.84, 0), TextXAlignment = Enum.TextXAlignment.Right, Max = 16, Font = TITLE_FONT })
 		s.TextColor3 = r.score > 0 and t.color or RED
@@ -359,9 +324,9 @@ local function startGame(mode)
 	game_ = { ranked = mode == "ranked" }
 	if profile then profile.coins = res.coins; coinCorner.Text = coinText(res.coins) end
 	if res.extraTime then toast("Extra Time boost: +5s every prompt") end
-	setDepth(0)
 	play("flush")
-	showPrompt(res.prompt)
+	show("none") -- hide the menus while the duck gets flushed
+	Scene.flush(function() showPrompt(res.prompt) end)
 end
 
 local function submit()
@@ -431,7 +396,7 @@ end)
 flushBtn.Activated:Connect(function() startGame("free") end)
 rankedBtn.Activated:Connect(function() startGame("ranked") end)
 againBtn.Activated:Connect(function() startGame(lastMode) end)
-homeBtn.Activated:Connect(function() setDepth(0); show("title") end)
+homeBtn.Activated:Connect(function() Scene.title(); show("title") end)
 
 ---------------------------------------------------------------- SHOP + STATS (modal)
 local modal = make("Frame", { Parent = gui, Size = UDim2.fromScale(0.86, 0.8), Position = UDim2.fromScale(0.5, 0.52), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = PANEL, BorderSizePixel = 0, Visible = false, ZIndex = 20 })
@@ -464,9 +429,15 @@ openShop = function()
 		local card = make("Frame", { Parent = modalBody, BackgroundColor3 = Color3.fromRGB(22, 30, 27), BorderSizePixel = 0, LayoutOrder = i, ZIndex = 22 })
 		local rName, rColor = rarity(s.price or 0)
 		stroke(card, 2, s.passId and Color3.fromHex("#39ff14") or rColor)
-		local icon = s.type == "duck" and "🦆" or s.type == "toilet" and "🚽" or "⏱️"
-		local ic = label({ Parent = card, Text = icon, Size = UDim2.new(1, 0, 0.32, 0), Max = 34, ZIndex = 23 })
-		if s.color then ic.TextColor3 = Color3.fromHex(s.color) end
+		local holder = make("Frame", { Parent = card, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.32, 0), ZIndex = 23 })
+		local pv
+		if s.type == "duck" then pv = Scene.pixel("duck0", 3, { tint = s.fx ~= "rainbow" and s.color or "#ff7ad9", z = 23 })
+		elseif s.type == "toilet" then pv = Scene.pixel(s.sprite or "toilet", 3, { tint = not s.sprite and s.color or nil, z = 23 })
+		elseif s.type == "trail" then
+			pv = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(42, 30), ZIndex = 23 })
+			for k = 0, 5 do make("Frame", { Parent = pv, BorderSizePixel = 0, BackgroundColor3 = Color3.fromHex(s.color), BackgroundTransparency = k * 0.14, Size = UDim2.fromOffset(42 - k * 6, 4), Position = UDim2.fromOffset(k * 3, k * 5), ZIndex = 23 }) end
+		else pv = label({ Text = "⏱️", Size = UDim2.fromOffset(40, 36), Max = 30, ZIndex = 23 }) end
+		pv.AnchorPoint = Vector2.new(0.5, 0.5); pv.Position = UDim2.fromScale(0.5, 0.5); pv.Parent = holder
 		label({ Parent = card, Text = s.name, Size = UDim2.new(1, -10, 0.2, 0), Position = UDim2.new(0, 5, 0.32, 0), Max = 16, ZIndex = 23 })
 		local rl = label({ Parent = card, Text = s.passId and "ROBUX PASS" or rName, Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.fromScale(0, 0.52), Max = 12, ZIndex = 23, Font = TITLE_FONT })
 		rl.TextColor3 = s.passId and Color3.fromHex("#39ff14") or rColor

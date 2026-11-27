@@ -53,6 +53,8 @@ From then on, every time a `.luau` file here is saved, Studio updates instantly.
 | `src/server/Profiles.luau` | Saves coins, stats, skins and seen prompts (DataStore) |
 | `src/server/Main.server.luau` | Runs every game. The server keeps the clock, judges answers and pays coins, so players can't cheat |
 | `src/client/Main.client.luau` | Every screen: title, prompt, reveal, results, shop, stats |
+| `src/client/Scene.luau` | The pixel-art world: duck in the toilet, the flush, then the sewer dive with pipes, brick walls, ledges and floating junk |
+| `src/client/Sprites.luau` | All the website's pixel sprites, drawn as Frames, so there's nothing to upload (made by `tools/roblox-sprites.js`) |
 
 ### Money (Roblox rules)
 - **Flush Coins are earn-only.** Everyone starts with 1,000. Free games pay 1 coin per 20 points, and ranked
@@ -64,12 +66,22 @@ From then on, every time a `.luau` file here is saved, Studio updates instantly.
   Studio tests. That run pays nothing and doesn't count toward stats.
 
 ### Art and sound
-Right now the duck and toilet are emoji. To use the pixel art:
-1. Export the sprites as PNGs.
-2. Upload them in Studio (**View → Asset Manager → Bulk Import**).
-3. Right-click each one, choose **Copy ID**, and paste it into `Config.IMAGES`.
+All the art is the website's pixel sprites, rebuilt from Frames in code, so there's nothing to upload:
+- **The title:** the duck bobbing in the toilet.
+- **The flush:** a foam swirl, a "whoops" backflip, then the duck gets pulled down.
+- **The dive** (down the middle):
+  - Pipes, then brick sewer walls.
+  - The Rat Kingdom from about 400 points, with torches, crowned mice and cheese.
+  - The disco core from about 500 points, with party mice, disco balls and boomboxes.
+  - Rainbow insanity from about 600 points, with hue-cycling bricks and rainbow trails.
+- **Skins:** shop skins tint the pixel art. The Golden Throne uses the gold toilet sprite, the expensive ducks get a
+  glow, sparkles and a crown, and trails stream behind the duck.
 
-Do the same for sounds in `Config.SOUNDS`. The duck and toilet take the equipped skin's color automatically.
+Sounds are optional. Upload them in Studio (**View → Asset Manager**), then paste the ids into `Config.SOUNDS`.
+
+If you change sprites in `js/ocean.js`, run `node tools/roblox-sprites.js`.
+To preview the scene without Roblox, run `node tools/roblox-render.js <folder>`. It writes PNG snapshots of the
+title, the flush and every zone.
 
 ## Updating the questions
 
@@ -98,8 +110,6 @@ node tools/roblox-sim.js
   timeouts, and saving across a rejoin.
 
 ## Not ported yet
-- The flush animation, pixel sewer zones, junk and rats. The background does change color by depth: water, then
-  pipes, deep sewer, rat kingdom at 400 points, disco at 500, and rainbow from 600 up.
 - Themed packs. Random games only, like the website's main mode.
 - Crowd rarity, where scores come from what real players answer. See `../ROBLOX.md`, section 1.
 - A global leaderboard. The in-game player list already shows Coins and Best.

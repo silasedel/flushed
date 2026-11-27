@@ -74,9 +74,9 @@ local function revealOf(q)
 	return { common = common, sigma = sigma }
 end
 
-local function startPrompt(g)
+local function startPrompt(g, lead)
 	g.phase = "answering"
-	g.deadline = os.clock() + g.answerSeconds
+	g.deadline = os.clock() + g.answerSeconds + (lead or 0) -- lead: the flush animation before the first prompt
 	Picker.markSeen(g.profile, g.ids[g.idx])
 end
 
@@ -157,7 +157,7 @@ function actions.start(player, args)
 	g.ids = Picker.pick(p, g.len > 0 and g.len or 10)
 	games[player] = g
 	leaderstats(player, p)
-	startPrompt(g)
+	startPrompt(g, Config.INTRO_SECONDS)
 	return { prompt = promptView(g), coins = p.coins, price = g.price, boost = g.boost, extraTime = g.extraTime }
 end
 

@@ -21,7 +21,8 @@ Config.COMEBACK_AFTER = 3 -- ...this many ranked losses in a row
 Config.WEIGHTS = { science = 4, geography = 3.2, general = 2.6, language = 1.3, fun = 0.8, sports = 0.6, gaming = 0.55, pop = 0.45, music = 0.35, movies = 0.3 }
 Config.ENTERTAINMENT = { pop = true, movies = true, music = true } -- at most 2 per game
 
--- Shop: cosmetics and boosts bought with Flush Coins. `color` tints the duck/toilet on screen.
+-- Shop: cosmetics and boosts bought with Flush Coins. `color` tints the duck/toilet pixel art (shade-preserving),
+-- `fx` adds an effect (diamond sparkle, rainbow, million-coin crown), `sprite` swaps the toilet art, `trail` = trail kind.
 -- Robux items go in ROBUX_PASSES below (cosmetic only).
 Config.SHOP = {
 	{ id = "duck-mint", type = "duck", name = "Mint Duck", price = 50, color = "#9fffd0" },
@@ -31,13 +32,21 @@ Config.SHOP = {
 	{ id = "duck-toxic", type = "duck", name = "Toxic Duck", price = 600, color = "#7dff6a" },
 	{ id = "duck-void", type = "duck", name = "Void Duck", price = 1500, color = "#8a5cff" },
 	{ id = "duck-gold", type = "duck", name = "Golden Duck", price = 5000, color = "#ffcc33" },
-	{ id = "duck-diamond", type = "duck", name = "Diamond Duck", price = 100000, color = "#dff8ff" },
-	{ id = "duck-million", type = "duck", name = "One-in-a-Million Duck", price = 1000000, color = "#ffd23f" },
+	{ id = "duck-diamond", type = "duck", name = "Diamond Duck", price = 100000, color = "#dff8ff", fx = "diamond" },
+	{ id = "duck-rainbow", type = "duck", name = "Rainbow Duck", price = 250000, color = "#ff7ad9", fx = "rainbow" },
+	{ id = "duck-million", type = "duck", name = "One-in-a-Million Duck", price = 1000000, color = "#ffd23f", fx = "million" },
 	{ id = "toilet-sky", type = "toilet", name = "Sky Blue Toilet", price = 100, color = "#bfe6ff" },
 	{ id = "toilet-pink", type = "toilet", name = "Pink Porcelain", price = 500, color = "#ffb3d9" },
 	{ id = "toilet-obsidian", type = "toilet", name = "Obsidian Throne", price = 2500, color = "#4a4458" },
-	{ id = "toilet-gold", type = "toilet", name = "Golden Throne", price = 20000, color = "#ffcc33" },
+	{ id = "toilet-gold", type = "toilet", name = "Golden Throne", price = 20000, color = "#ffcc33", sprite = "goldtoilet" },
 	{ id = "toilet-diamond", type = "toilet", name = "Diamond Throne", price = 500000, color = "#e6fbff" },
+	{ id = "trail-bubble", type = "trail", name = "Bubble Trail", price = 50, color = "#c8f0ff", trail = "bubble" },
+	{ id = "trail-confetti", type = "trail", name = "Confetti Trail", price = 250, color = "#ff3fb4", trail = "confetti" },
+	{ id = "trail-sparkle", type = "trail", name = "Sparkle Trail", price = 1200, color = "#ffe14a", trail = "sparkle" },
+	{ id = "trail-fire", type = "trail", name = "Fire Trail", price = 1750, color = "#ff4d2a", trail = "fire" },
+	{ id = "trail-rainbow", type = "trail", name = "Rainbow Trail", price = 2000, color = "#7dff6a", trail = "rainbow" },
+	{ id = "trail-money", type = "trail", name = "Money Trail", price = 75000, color = "#7dff6a", trail = "money" },
+	{ id = "trail-aura", type = "trail", name = "Infinite Aura Trail", price = 150000, color = "#8a5cff", trail = "aura" },
 	{ id = "boost-time", type = "boost", name = "Extra Time", note = "+5s every prompt, next ranked run", price = 25 },
 }
 
@@ -47,9 +56,9 @@ Config.ROBUX_PASSES = {
 	{ id = "pass-neon", passId = 0, type = "duck", name = "Neon Duck (Game Pass)", color = "#39ff14" },
 }
 
--- Art and sound. Upload the sprites/sounds in Studio (Asset Manager), paste the "rbxassetid://..." ids here.
--- Empty = the game uses emoji/colored text instead.
-Config.IMAGES = { duck = "", toilet = "", sigma = "", skibidi = "", rizz = "", mid = "", npc = "" }
+-- Sounds: upload in Studio (Asset Manager), paste the "rbxassetid://..." ids here. Empty = silent.
+-- (All the art is pixel sprites drawn in code from client/Sprites.luau, so there's nothing to upload for visuals.)
+Config.INTRO_SECONDS = 3.1 -- the flush animation before the first prompt (added to the first prompt's clock)
 Config.SOUNDS = { correct = "", miss = "", flush = "", tick = "" }
 
 return Config
