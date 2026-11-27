@@ -1574,8 +1574,8 @@
     const pick = arr => arr[Math.floor(rnd * arr.length) % arr.length];
     if (z === 0) return pick(['tpWad', 'tpWad', 'tpSheet', 'flossPick', 'qtip', 'gum', 'bandaid', 'soapBar', 'toothbrush', 'tpWad', 'duckling']);
     if (z === 1) return pick(['tpWad', 'ring', 'lego', 'keys', 'phone', 'coin', 'sock', 'airpod', 'goldfish', 'flossPick', 'duckling', 'tpSheet']);
-    if (z === 2) return pick(['mouse', 'mouse', 'rat', 'roach', 'pizza', 'gatorEyes', 'sludge', 'tpWad', 'roach', 'coin']);
-    if (z === 3) return pick(['crownMouse', 'ratking', 'cheese', 'chain', 'mouse', 'crownMouse', 'coin', 'rat', 'cheese']);
+    if (z === 2) return pick(['mouse', 'mouse', 'rat', 'rat', 'pizza', 'gatorEyes', 'sludge', 'tpWad', 'coin', 'mouse']);
+    if (z === 3) return pick(['crownMouse', 'ratking', 'cheese', 'chain', 'crownMouse', 'coin', 'coin', 'rat', 'cheese', 'ratking']);
     return pick(['partyMouse', 'partyMouse', 'disco', 'boombox', 'glowstick', 'partyMouse', 'cheese', 'glowstick', 'auraBlob']);
   }
 
@@ -1620,16 +1620,17 @@
     for (let c = c0; c <= c1; c++) {
       if (c < 0) continue;
       const midM = c * CH + CH / 2; const z = zoneIndex(dz(midM));
-      const n = hash(c * 7) > 0.45 ? 1 : (hash(c * 11) > 0.75 ? 2 : 0);
+      const n = dz(c * CH) > Z_MAD ? 2 + (hash(c * 13) > 0.5 ? 1 : 0) : hash(c * 7) > 0.45 ? 1 : (hash(c * 11) > 0.75 ? 2 : 0); // the insane zone is packed
       for (let k = 0; k < n; k++) {
         const s = c * 97 + k * 31 + 5;
-        const type = zoneCreatures(z, hash(s));
+        const mad = dz(midM) > Z_MAD;
+        const type = mad ? ['partyMouse', 'goldtoilet', 'duckling', 'disco', 'partyMouseB', 'ratking', 'partyMouseC', 'glowstick'][Math.floor(hash(s) * 8)] : zoneCreatures(z, hash(s));
         const m = c * CH + 6 + hash(s + 1) * (CH - 12);
         let y = (m - O.topM) * ppm;
         if (y < -30 || y > O.H + 30) continue;
         const dir = hash(s + 2) > 0.5 ? 1 : -1;
-        const swims = ['mouse', 'rat', 'roach', 'goldfish', 'crownMouse', 'partyMouse'].includes(type);
-        const sp = swims ? 4 + hash(s + 3) * 7 : 1.2 + hash(s + 3) * 2.2;
+        const swims = mad || ['mouse', 'rat', 'goldfish', 'crownMouse', 'partyMouse'].includes(type);
+        const sp = mad ? 14 + hash(s + 3) * 20 : swims ? 4 + hash(s + 3) * 7 : 1.2 + hash(s + 3) * 2.2;
         const span = O.W + 40;
         const x = ((hash(s + 4) * span + O.t * sp * dir) % span + span) % span - 20;
         const ph = hash(s + 5) * 6.28;
@@ -1637,6 +1638,14 @@
         const yy = y + bob;
         const dd = dz(m), wl = dd < SEWER_TOP ? pipeW(dd) : wallAt(dd, 0) + 2, wr = dd < SEWER_TOP ? pipeW(dd) : wallAt(dd, 1) + 2;
         ctx.save(); ctx.beginPath(); ctx.rect(Math.round(wl), yy - 40, Math.round(O.W - wl - wr), 80); ctx.clip();
+        if (mad) { // a rainbow trail streaming behind
+          const RB = ['#ff3f6a', '#ff9a2a', '#ffe14a', '#7dff6a', '#4ad0ff', '#c58bff'], len = 26;
+          for (let k = 0; k < len; k += 2) for (let b = 0; b < 6; b++) {
+            ctx.fillStyle = RB[b]; ctx.globalAlpha = 0.75 * (1 - k / len);
+            ctx.fillRect(Math.round(dir > 0 ? x - k : x + 22 + k), Math.round(yy + 3 + b + Math.sin(O.t * 8 + k * 0.4) * 1.5), 2, 1);
+          }
+          ctx.globalAlpha = 1;
+        }
         drawOne(ctx, type, x, y, yy, dir, ph, s, z, swims);
         ctx.restore();
       }
@@ -1678,6 +1687,11 @@
       const y = ((hash(i * 7) * O.H - camPx + O.t * sp) % O.H + O.H) % O.H;
       const m = O.topM + y / O.ppm; if (m < 4) continue;
       const d = dz(m), deep = d > 1000;
+      if (d > Z_MAD && i % 3 === 0) { // flashing rainbow stars
+        const on = Math.sin(O.t * 6 + i * 1.7) > 0.2; if (!on) continue;
+        ctx.fillStyle = ['#ff3f6a', '#ffe14a', '#7dff6a', '#4ad0ff', '#c58bff', '#ffffff'][(i + Math.floor(O.t * 4)) % 6];
+        const sx = Math.round(x), sy = Math.round(y); ctx.fillRect(sx, sy - 1, 1, 3); ctx.fillRect(sx - 1, sy, 3, 1); continue;
+      }
       if (d > Z_CORE && i % 2 === 0) { // confetti
         ctx.fillStyle = ['#ff3fb4', '#7dff6a', '#4ad0ff', '#ffe14a', '#c58bff'][i % 5];
         ctx.fillRect(Math.round(x), Math.round(y), (i + Math.floor(O.t * 3)) % 2 ? 2 : 1, (i + Math.floor(O.t * 3)) % 2 ? 1 : 2); continue;
@@ -1755,6 +1769,13 @@
         }
         ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.fillRect(side ? W - wall - 2 : wall, yb, 2, BH); // shadow onto the tunnel
         ctx.fillStyle = row[1]; ctx.fillRect(side ? W - wall : wall - 1, yb, 1, BH - 2);           // lit inner edge
+        if (d >= Z_RAT - 150 && d < Z_CORE + 300 && hash(r * 11 + side * 5) > 0.9) { // rat-kingdom torches on the walls
+          const tx = side ? W - wall + 3 : wall - 7, ty = yb - 4, fl = Math.sin(O.t * 13 + r) * 0.5 + Math.sin(O.t * 7.3 + r * 2) * 0.5;
+          glow(ctx, tx + 2, ty - 3, 14, [255, 170, 60], 0.22 + 0.08 * fl);
+          ctx.fillStyle = '#3a2a1a'; ctx.fillRect(tx + 1, ty, 3, 7); ctx.fillStyle = '#7a5a3a'; ctx.fillRect(tx, ty, 5, 2); // bracket
+          ctx.fillStyle = '#ff6a1f'; ctx.fillRect(tx + 1, ty - 4, 3, 4); ctx.fillStyle = '#ffd23f'; ctx.fillRect(tx + 2, ty - 5 - Math.round(fl), 1, 4);
+          ctx.fillStyle = '#fff3b0'; ctx.fillRect(tx + 2, ty - 2, 1, 1);
+        }
         if (hash(r * 7 + side * 13) > 0.94) { // a glowing speck stuck in the mortar
           const gx = side ? W - wall * (0.3 + hash(r + 3) * 0.5) : wall * (0.3 + hash(r + 3) * 0.5);
           const col = d < Z_RAT ? [125, 255, 106] : d < Z_CORE ? [255, 213, 74] : [255, 143, 209];
@@ -1816,7 +1837,7 @@
     const top = dz(O.topM) - 60, bot = dz(O.topM + O.H / ppm) + 60;
     for (let L = Math.max(SEWER_TOP + 150, Math.floor(top / STEP) * STEP); L < bot; L += STEP) {
       const s = L * 7 + 13, deepness = clamp((L - Z_CORE) / 2600, 0, 1.4); // keeps climbing past 1 = more insane
-      const chance = L < Z_RAT ? 0.16 : L < Z_CORE ? 0.3 : Math.min(0.95, 0.42 + 0.38 * deepness); // gets busier the deeper you go
+      const chance = L < Z_RAT ? 0.16 : L < Z_CORE ? 0.55 : Math.min(0.95, 0.42 + 0.38 * deepness); // gets busier the deeper you go
       if (hash(s) > chance) continue;
       const side = hash(s + 1) > 0.5 ? 1 : 0, y = Math.round(Math.round(((L + OFF) * ppm) / BH) * BH - O.topM * ppm); // sits on a brick course
       const edge = wallAt(L, side), len = 30 + Math.floor(hash(s + 2) * 3) * 6, zc = wallColors(L);
@@ -1830,7 +1851,7 @@
       const kind = hash(s + 3);
       if (L < Z_RAT) { // sewer: a mouse peeking out, or a roach
         if (kind < 0.6) drawSprite(ctx, 'mouse0', mid - 15, y - sprite('mouse0').h + 1, side === 1);
-        else drawSprite(ctx, 'roach', mid - 11, y - sprite('roach').h + 2, side === 1);
+        else drawSprite(ctx, 'rat0', mid - 15, y - sprite('rat0').h + 1, side === 1);
       } else if (L < Z_CORE) { // rat kingdom: royalty and riches
         if (kind < 0.45) drawSprite(ctx, 'crownMouse', mid - 15, y - sprite('crownMouse').h + 1, side === 1);
         else if (kind < 0.75) { glow(ctx, mid, y - 6, 10, [255, 213, 74], 0.14); drawSprite(ctx, 'cheese', mid - 11, y - sprite('cheese').h + 1, side === 1); }

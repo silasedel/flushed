@@ -1,0 +1,72 @@
+cat-0002  (28 answers)  Name a Valorant agent.
+cat-0004  (27 answers)  Name an Apex Legends character.
+cat-0039  (31 answers)  Name a Diary of a Wimpy Kid character.
+cat-0040  (33 answers)  Name a Kung Fu Panda character.
+cat-0041  (38 answers)  Name a Modern Family character.
+cat-0042  (38 answers)  Name a High School Musical character.
+cat-0043  (29 answers)  Name a Mean Girls character.
+cat-0048  (24 answers)  Name an emotion character from Inside Out.
+cat-0049  (33 answers)  Name a Disney live-action remake.
+cat-0054  (34 answers)  Name a character from Wicked.
+cat-0055  (17 answers)  Name a character from KPop Demon Hunters.
+cat-0061  (11 answers)  Name a member of BTS or BLACKPINK.
+cat-0124  (8 answers)  Name an Ivy League school.
+gam-0002  (19 answers)  Name a Pokémon type (as of Generation IX).
+gam-0013  (12 answers)  Name a Fire-type Pokémon from the original 151.
+gam-0019  (21 answers)  Name a Minecraft ore or ore-like block.
+gam-0046  (19 answers)  Name a crewmate color in Among Us.
+gam-0067  (9 answers)  Name a non-property space on a classic Monopoly board.
+gen-0002  (8 answers)  Name a US president who died in office.
+gen-0003  (12 answers)  Name a US president who took office before 1850.
+gen-0005  (19 answers)  Name a Republican US president (up to 2024).
+gen-0006  (16 answers)  Name a Democratic US president (up to 2024).
+gen-0097  (31 answers)  Name a Japanese car brand (past or present).
+gen-0166  (12 answers)  Name a sign of the Western zodiac.
+gen-0170  (23 answers)  Name a painting by Leonardo da Vinci.
+gen-0180  (24 answers)  Name a suit from any kind of playing-card or tarot deck.
+gen-0188  (9 answers)  Name one of Santa's reindeer.
+gen-0197  (9 answers)  Name a letter used in Roman numerals.
+geo-0007  (16 answers)  Name a country in Oceania.
+geo-0009  (12 answers)  Name a country in South America.
+geo-0013  (17 answers)  Name a country in the Middle East.
+geo-0015  (7 answers)  Name a country whose name ends in '-stan'.
+geo-0055  (27 answers)  Name a national capital in North or Central America or the Caribbean.
+geo-0062  (10 answers)  Name one of the 10 most populous US cities (2020 census).
+geo-0095  (14 answers)  Name a US state with an Atlantic Ocean coastline.
+geo-0102  (8 answers)  Name a US state beginning with M.
+geo-0103  (8 answers)  Name a US state beginning with N.
+geo-0105  (17 answers)  Name a state in the US Census South region.
+geo-0106  (13 answers)  Name a state in the US Census West region.
+geo-0183  (8 answers)  Name one of the eight main Hawaiian Islands.
+lang-0004  (20 answers)  Name a sovereign country where Spanish is an official language.
+lang-0005  (29 answers)  Name a country where French was an official language as of 2020.
+lang-0006  (10 answers)  Name a country or territory where Portuguese is an official language.
+lang-0008  (24 answers)  Name one of the 24 official languages of the European Union.
+lang-0015  (30 answers)  Name a letter of the Greek alphabet.
+lang-0019  (16 answers)  Name a part of speech in English grammar.
+lang-0040  (30 answers)  Name a character from Shakespeare's Romeo and Juliet.
+lang-0049  (19 answers)  Name a Harry Potter book (main series, play script or companion books).
+lang-0079  (30 answers)  Name a character from Winnie-the-Pooh (books or Disney).
+lang-0081  (25 answers)  Name a language spoken in Spain.
+lang-0091  (9 answers)  Name a country where German is an official language (national or regional).
+mov-0007  (31 answers)  Name a Pixar feature film.
+mov-0051  (13 answers)  Name a Star Wars film released in cinemas.
+mov-0053  (11 answers)  Name a Wizarding World (Harry Potter universe) film.
+mov-0055  (22 answers)  Name a Hogwarts teacher or staff member from the Harry Potter films.
+mov-0056  (35 answers)  Name a member of the Weasley family from Harry Potter.
+mov-0058  (37 answers)  Name a Marvel Cinematic Universe film released 2008-2025.
+mov-0068  (8 answers)  Name a Jurassic Park or Jurassic World film.
+mov-0075  (16 answers)  Name an actor who played or voiced Spider-Man in a film.
+mov-0083  (29 answers)  Name a character from Disney's Frozen films.
+mov-0084  (13 answers)  Name an official Disney Princess (lineup as of 2025).
+mov-0089  (26 answers)  Name a character from Disney's The Lion King films.
+mov-0090  (28 answers)  Name a character from The Wizard of Oz (1939).
+pop-0002  (37 answers)  Name a member of the Kardashian-Jenner family.
+pop-0051  (38 answers)  Name a character from Bluey.
+pop-0159  (20 answers)  Name a reindeer from Christmas songs, stories or films.
+spo-0001  (30 answers)  Name an NBA team (2025-26 season).
+spo-0002  (32 answers)  Name an NFL team (2025 season).
+spo-0003  (30 answers)  Name a Major League Baseball team (2025 season).
+spo-0007  (23 answers)  Name a US state where an NFL team plays its home games (2025).
+spo-0020  (25 answers)  Name a fielding position in baseball.
+spo-0058  (29 answers)  Name a swimming stroke.

@@ -1,0 +1,89 @@
+xgeo-0001  (29 answers)  Name a country beginning with S.
+xgeo-0002  (19 answers)  Name a country beginning with C.
+xgeo-0003  (19 answers)  Name a country beginning with B.
+xgeo-0004  (19 answers)  Name a country beginning with M.
+xgeo-0005  (12 answers)  Name a country beginning with G.
+xgeo-0006  (13 answers)  Name a country beginning with N.
+xgeo-0007  (14 answers)  Name a country beginning with A.
+xgeo-0008  (12 answers)  Name a country beginning with P.
+xgeo-0009  (12 answers)  Name a country beginning with T.
+xgeo-0010  (11 answers)  Name a country beginning with E.
+xgeo-0011  (13 answers)  Name a country whose name ends in '-land'.
+xgeo-0013  (11 answers)  Name a country with exactly four letters in its name.
+xgeo-0014  (17 answers)  Name a country with the letter Z in its name.
+xgeo-0015  (19 answers)  Name a country with North, South, East or West in its name (past or present).
+xgeo-0016  (38 answers)  Name a country whose name is more than one word.
+xgeo-0017  (23 answers)  Name a country in North America.
+xgeo-0018  (29 answers)  Name a country in Eastern Europe.
+xgeo-0021  (35 answers)  Name a country with an Indian Ocean coastline.
+xgeo-0022  (21 answers)  Name a country with a Caribbean Sea coastline.
+xgeo-0023  (7 answers)  Name a country that borders Ukraine.
+xgeo-0024  (6 answers)  Name a country that borders Italy.
+xgeo-0025  (7 answers)  Name a country that borders Poland.
+xgeo-0027  (27 answers)  Name a country that uses the euro.
+xgeo-0028  (35 answers)  Name a country that uses a currency called the dollar.
+xgeo-0029  (8 answers)  Name a country whose currency is called the peso.
+xgeo-0030  (9 answers)  Name a country that has nuclear weapons.
+xgeo-0031  (36 answers)  Name a member country of NATO (2025).
+xgeo-0038  (24 answers)  Name a country with a cross on its flag.
+xgeo-0041  (21 answers)  Name a country whose flag has three vertical stripes.
+xgeo-0042  (17 answers)  Name a country with a sun on its flag.
+xgeo-0045  (38 answers)  Name a country that is bigger than Texas.
+xgeo-0046  (32 answers)  Name a country that was once ruled by Spain.
+xgeo-0047  (28 answers)  Name a European country that is not in the EU (2025).
+xgeo-0048  (12 answers)  Name a US state that begins with a vowel.
+xgeo-0049  (10 answers)  Name a US state with a two-word name.
+xgeo-0050  (21 answers)  Name a US state whose name ends in the letter A.
+xgeo-0051  (28 answers)  Name a US state east of the Mississippi River.
+xgeo-0052  (24 answers)  Name a US state west of the Mississippi River.
+xgeo-0056  (14 answers)  Name a US territory (2025).
+xgeo-0057  (13 answers)  Name a US state that was part of the Confederacy.
+xgeo-0091  (19 answers)  Name a world capital city beginning with M.
+xgeo-0092  (17 answers)  Name a world capital city beginning with P.
+xgeo-0093  (18 answers)  Name a world capital city beginning with S.
+xgeo-0094  (16 answers)  Name a world capital city beginning with A.
+xgeo-0099  (9 answers)  Name a country in South Asia.
+xgeo-0100  (8 answers)  Name a country or territory in East Asia.
+xgeo-0101  (19 answers)  Name a country in Western Europe.
+xgeo-0102  (19 answers)  Name a country in East Africa.
+xgeo-0105  (36 answers)  Name a city in Nebraska.
+xgeo-0111  (38 answers)  Name a city in Idaho.
+xgeo-0112  (37 answers)  Name a city in Montana.
+xgeo-0113  (39 answers)  Name a city in Sweden.
+xgeo-0116  (39 answers)  Name a city in Vietnam.
+xgeo-0117  (37 answers)  Name a city in Thailand.
+xgeo-0118  (38 answers)  Name a city in Argentina.
+xgeo-0121  (38 answers)  Name a city in Switzerland.
+xgeo-0122  (37 answers)  Name a city in Portugal.
+xgeo-0123  (32 answers)  Name a city in Peru.
+xgeo-0124  (28 answers)  Name a city in Cuba.
+xgeo-0136  (38 answers)  Name a war the United States fought in.
+ytec-0002  (36 answers)  Name a Jeep model.
+ytec-0004  (9 answers)  Name a Tesla model.
+ytec-0006  (34 answers)  Name a Subaru model.
+ytec-0010  (34 answers)  Name a Porsche model.
+ytec-0036  (28 answers)  Name an emergency vehicle.
+ytec-0037  (39 answers)  Name a construction vehicle.
+ytec-0038  (34 answers)  Name a vehicle with two wheels.
+ytec-0070  (36 answers)  Name a printer brand.
+ytec-0078  (38 answers)  Name a type of computer.
+ytec-0079  (33 answers)  Name a VR or AR headset.
+ytec-0085  (37 answers)  Name a device for playing music.
+ytec-0086  (34 answers)  Name a type of telephone.
+ytec-0088  (38 answers)  Name a Sony product.
+ytec-0089  (39 answers)  Name a hand or gesture emoji.
+ytec-0093  (36 answers)  Name a heart emoji.
+ytec-0096  (30 answers)  Name a music emoji.
+ytec-0097  (37 answers)  Name a US coin or bill.
+ytec-0103  (37 answers)  Name a type of bank account.
+ytec-0104  (32 answers)  Name a picture or word on the US one-dollar bill.
+ytec-0111  (17 answers)  Name an Apollo mission.
+ytec-0112  (34 answers)  Name a part of a rocket.
+ytec-0116  (35 answers)  Name a machine used for yard work.
+ytec-0117  (11 answers)  Name a company Elon Musk founded or co-founded.
+ytec-0119  (37 answers)  Name a type of battery (like AA).
+ytec-0120  (36 answers)  Name a battery brand.
+ytec-0121  (32 answers)  Name a type of light bulb.
+ytec-0125  (36 answers)  Name a word that starts with 'tele' (like telephone).
+ytec-0127  (37 answers)  Name a word that starts with 'auto' (like automatic).
+ytec-0130  (38 answers)  Name a light on a car (like headlights).

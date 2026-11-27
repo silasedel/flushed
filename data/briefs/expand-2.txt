@@ -1,0 +1,72 @@
+sch-0003  (24 answers)  Name a whole number that divides evenly into 360.
+sch-0006  (38 answers)  Name a number ending in "-illion" (like a million).
+sch-0008  (38 answers)  Name a type of angle (like a right angle).
+sch-0009  (25 answers)  Name a type of triangle (like a right triangle).
+sch-0011  (22 answers)  Name a part of a circle (like the radius).
+sch-0012  (33 answers)  Name a math operation (like addition).
+sch-0038  (20 answers)  Name one of the five senses (or another sense you have).
+sch-0039  (34 answers)  Name a part of the hand (like the thumb).
+sch-0041  (39 answers)  Name a part of the mouth (like the tongue).
+sch-0042  (33 answers)  Name a type of tooth (like a molar).
+sch-0046  (34 answers)  Name a part of the leg (like the knee).
+sch-0047  (38 answers)  Name a fluid your body makes (like sweat).
+sch-0049  (33 answers)  Name a part of the foot (like the heel).
+sch-0050  (31 answers)  Name a part of the arm (like the elbow).
+sch-0078  (25 answers)  Name a fossil fuel (like coal).
+sch-0083  (36 answers)  Name a part of the water cycle (like evaporation).
+sch-0086  (35 answers)  Name a phase of the Moon (like a full moon).
+sci-0006  (11 answers)  Name an element that is a gas at room temperature.
+sci-0020  (8 answers)  Name a precious metal.
+sci-0037  (17 answers)  Name a temperature scale.
+sci-0041  (7 answers)  Name a color of the rainbow.
+sci-0044  (21 answers)  Name a state of matter.
+sci-0046  (27 answers)  Name a renewable energy source.
+sci-0048  (8 answers)  Name a planet in our solar system.
+sci-0050  (13 answers)  Name a zodiac constellation the Sun passes through.
+sci-0064  (12 answers)  Name one of the twelve people who walked on the Moon.
+sci-0066  (13 answers)  Name a space station, past or present.
+sci-0084  (28 answers)  Name an invention credited to Thomas Edison.
+sci-0096  (14 answers)  Name a vitamin.
+sci-0124  (19 answers)  Name a carnivorous plant.
+sci-0134  (20 answers)  Name a type of precipitation.
+sci-0146  (30 answers)  Name an animal with "fish" in its name that isn't a fish.
+xpop-0043  (23 answers)  Name a WNBA team (past or present).
+xpop-0055  (36 answers)  Name a sports drink brand.
+xpop-0060  (38 answers)  Name a superhero with "Man" in their name.
+xpop-0068  (33 answers)  Name a duck from a cartoon, movie or game.
+xpop-0071  (36 answers)  Name a fish from a cartoon, movie or book.
+xpop-0073  (34 answers)  Name a pig from a cartoon, movie or book.
+xpop-0074  (39 answers)  Name a ghost from a movie, TV show or game.
+xpop-0100  (21 answers)  Name a song by Chappell Roan.
+xpop-0114  (39 answers)  Name a song by Cardi B (lead or featured).
+xsch-0010  (38 answers)  Name a word that starts with X.
+xsch-0030  (30 answers)  Name a word that sounds like a letter of the alphabet.
+xsch-0059  (19 answers)  Name a day of the week or a month in Spanish.
+xsch-0071  (39 answers)  Name a right protected by the US Bill of Rights.
+xsch-0073  (26 answers)  Name a person pictured on a US bill (including $500 and up).
+xsch-0079  (20 answers)  Name a department in the US president's Cabinet.
+xsch-0083  (7 answers)  Name a month that has 31 days.
+xsch-0084  (11 answers)  Name a branch of the US military.
+xsch-0086  (8 answers)  Name a US president whose last name has only one syllable.
+xsch-0087  (20 answers)  Name a multiple of 5 from 5 to 100.
+xsch-0088  (31 answers)  Name a power of 2 (like 8).
+xsch-0089  (13 answers)  Name a number in the 12 times table (up to 12 x 12).
+xsch-0090  (9 answers)  Name a two-digit number whose digits add up to 10.
+xsch-0091  (25 answers)  Name an odd number between 1 and 50.
+xsch-0092  (28 answers)  Name a perfect cube (like 8).
+xsch-0094  (14 answers)  Name a number from 1 to 100 that 7 divides evenly.
+xsch-0095  (20 answers)  Write a number from 1 to 20 in Roman numerals.
+xsch-0102  (32 answers)  Name a fraction equal to one quarter (like 2/8).
+xsch-0123  (23 answers)  Name a question word in Spanish (like 'qué').
+yabc-0032  (39 answers)  Name a fruit or vegetable that starts with O.
+yabc-0043  (38 answers)  Name a tree that starts with M.
+yabc-0059  (9 answers)  Name a country that starts with I.
+yabc-0060  (7 answers)  Name a country that starts with U.
+yabc-0061  (7 answers)  Name a country that starts with K.
+yabc-0062  (9 answers)  Name a country that starts with L.
+yabc-0063  (9 answers)  Name a chemical element that starts with S.
+yabc-0064  (7 answers)  Name a chemical element that starts with M.
+yabc-0129  (32 answers)  Name a car brand that starts with M.
+yabc-0130  (27 answers)  Name a car brand that starts with C.
+yabc-0131  (25 answers)  Name a car brand that starts with B.
+yabc-0140  (37 answers)  Name a restaurant chain that starts with W.
