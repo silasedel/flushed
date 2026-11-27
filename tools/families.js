@@ -16,7 +16,7 @@ const byAns = new Map();
 sets.forEach((s, i) => { for (const x of s) { if (!byAns.has(x)) byAns.set(x, []); byAns.get(x).push(i); } });
 const parent = qs.map((_, i) => i);
 const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
-const SIM = 0.6, MIN = 8;
+const SIM = 0.45, MIN = 6;
 let links = 0;
 for (let i = 0; i < qs.length; i++) {
   const shared = new Map();
