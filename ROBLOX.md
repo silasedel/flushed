@@ -109,17 +109,17 @@ Rule of thumb: *anything that can be bought with Robux must never be a stake you
 The 6969 cheat code is for testing only — remove it from the Roblox build (or lock it to your own UserId).
 
 ### The profit system (built into the web prototype, port it as-is)
-- **Ranked buy-in tracks the real average.** Entry = (average points per prompt × prompts ÷ 10) × 1.05, rounded up; payout = score ÷ 10, rounded down.
+- **Ranked buy-in tracks the real average.** Entry = (average points per prompt × prompts ÷ 5) × 1.15 (or higher if the profit guard has raised it), rounded up; payout = score ÷ 5, rounded down.
   The average comes from *recent* ranked prompts (web: this device, blended with a 25.45 prior; Roblox: all players'
   last ~10,000 ranked prompts in a DataStore, recomputed every few minutes). Players get better → price goes up;
   worse → down. The 5% cut plus rounding (entry up, payout down) means payouts can never outrun buy-ins on average, whatever tricks people find.
-  Starting prices with the default average: 5 prompts = 14, 7 prompts = 19, 10 prompts = 27 (a 230-point run pays 23).
+  Starting prices with the default average: 5 prompts = 30, 7 prompts = 41, 10 prompts = 59 (a 230-point run pays 46).
 - **Shop (pure profit, no effect on score):** duck skins 100–300, toilet skins 150–400, trails 120–200.
 - **Boost:** Extra Time (+5s every prompt, one ranked run) costs 5 — worth far less than 5 in extra payout on average,
   so it's profitable too. Don't sell boosts that add points directly.
 - On real Roblox, keep the Section 5 rule: Robux buys shop items/passes; the ranked stake must be an earn-only currency.
 - **Profit guard (self-correcting).** The server keeps a ledger of the last 40 ranked runs (entries in, payouts out).
-  If the house margin drops under 8% (players winning for any reason), the price multiplier rises 4% per run until
+  If the house margin drops under 15% (players winning for any reason), the price multiplier rises 4% per run until
   the margin is back on target; once it's comfortably above (20%+) it drifts back toward the base 5%. Simulated
   300-run sessions: average/good/pro players and players who suddenly improve all leave the house ~20–28% ahead, and
   in 200 random sims per player type the house never ended a session down.

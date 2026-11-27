@@ -22,25 +22,25 @@
   // You start with R$1,000. Normal games are free and pay nothing. Ranked: buy in at the "market price" for the
   // number of prompts, get paid R$1 per 5 points. The price sits ~10% above what an average player wins back, so
   // beating the average = profit and the house keeps a small edge. See ROBLOX.md, "Money" for the real-Roblox rules.
-  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 10, AVG_PER_PROMPT = 25.45; // payout = score ÷ 10, rounded down
+  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 5, AVG_PER_PROMPT = 25.45; // payout = score ÷ 5, rounded down
   const rankedLen = () => (LENGTHS.includes(store.settings.len) && store.settings.len ? store.settings.len : 10);
   // The buy-in follows how players ACTUALLY score (recent prompts), not a fixed guess: if people get better the price
   // rises, if they get worse it falls. Price = average payout for that length + the house cut, so on average the house
   // always takes in more than it pays out. Web: this device's recent prompts blended with the model. Roblox: every
   // player's recent ranked prompts (DataStore), same formula.
-  const HOUSE_CUT = 1.05, PRIOR_PROMPTS = 40; // base: entry = average payout + 5%, rounded up
+  const HOUSE_CUT = 1.15, PRIOR_PROMPTS = 40; // base: entry = average payout + 15%, rounded up
   // Profit guard: the house keeps a ledger of recent ranked runs (entries in, payouts out). If the house's margin over
   // the last 40 runs drops below 8% (players are winning: new tricks, better players, lucky streak), the price multiplier
   // steps up 4% per run until the house is back on target; when the margin is comfortably above target it drifts back
   // down toward the base cut. So whatever players do, entries keep running ahead of payouts.
-  const TARGET_MARGIN = 0.08, LEDGER_N = 40;
+  const TARGET_MARGIN = 0.15, LEDGER_N = 40;
   function houseMargin() {
     const L = (store.ledger || []).slice(-LEDGER_N); const tin = L.reduce((a, r) => a + r[0], 0), tout = L.reduce((a, r) => a + r[1], 0);
     return { n: L.length, margin: tin ? (tin - tout) / tin : TARGET_MARGIN };
   }
   function settleRun(entry, payout) {
     store.ledger = [...(store.ledger || []), [entry, payout]].slice(-200);
-    const { n, margin } = houseMargin(); let k = store.houseK || HOUSE_CUT;
+    const { n, margin } = houseMargin(); let k = Math.max(HOUSE_CUT, store.houseK || 0);
     if (n >= 3 && margin < TARGET_MARGIN) k *= 1.04;                       // players winning -> raise
     else if (margin > TARGET_MARGIN + 0.12) k = Math.max(HOUSE_CUT, k * 0.99); // well ahead -> ease back
     store.houseK = Math.min(3, k);
@@ -49,7 +49,7 @@
     const recent = cleanGames().slice(-40).flatMap(e => e.results.map(r => r.score || 0)).slice(-300);
     return (AVG_PER_PROMPT * PRIOR_PROMPTS + recent.reduce((a, b) => a + b, 0)) / (PRIOR_PROMPTS + recent.length);
   }
-  const marketPrice = len => Math.max(1, Math.ceil((avgPerPrompt() * len / RANKED_RATE) * (store.houseK || HOUSE_CUT)));
+  const marketPrice = len => Math.max(1, Math.ceil((avgPerPrompt() * len / RANKED_RATE) * Math.max(HOUSE_CUT, store.houseK || 0)));
   const coinsFor = (score, ranked) => (ranked ? Math.floor(score / RANKED_RATE) : 0);
   let coinImg = '';
   const coinTag = n => `<span class="coin">${coinImg ? `<img class="pix coin-ico" src="${coinImg}" alt="">` : ''}${Number(n).toLocaleString('en-US')}</span>`;
