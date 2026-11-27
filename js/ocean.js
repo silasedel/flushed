@@ -1448,7 +1448,7 @@
     shrimpM: 0, shrimpFrom: 0, shrimpTo: 0, tweenT0: 0, tweenDur: 0,
     topM: -9999, ppm: 0,
     t: 0, last: 0, bubbles: [], clouds: [], dims: 0,
-    onDepth: null, showShrimp: false, sinking: false,
+    onDepth: null, showShrimp: false, sinking: false, skin: {},
   };
 
   function resize() {
@@ -1540,7 +1540,7 @@
     // the toilet the duck got flushed down, sitting on the waterline
     const big = O.view === 'title' || O.view === 'intro';
     const k = O.view === 'results' ? 2 : big ? (window.innerWidth < 700 ? 4 : 5) : 3;
-    const bs = sprite('toilet');
+    const bs = sprite(O.skin.toiletSprite || 'toilet', O.skin.toiletSprite ? undefined : O.skin.toiletTint);
     const cxF = O.view === 'results' ? 0.1 : big ? (window.innerWidth < 700 ? 0.24 : 0.17) : 0.17;
     const bx = Math.round(O.W * cxF - bs.w * k / 2);
     O.toiletCX = bx + bs.w * k / 2;
@@ -1559,7 +1559,7 @@
   function drawDuckInBowl(ctx, bs, bx, ty, k) {
     const p = O.view === 'intro' ? (O.reduced ? 1 : flushP()) : -1;
     const cx = bx + Math.round(bs.w * k / 2), rimY = ty + 6 * k, bowlR = 6.5 * k;
-    const ds = sprite('duck0');
+    const ds = sprite('duck0', O.skin.duckTint);
     const ds0 = k * 0.42;
     if (p >= 0 && p < 1.05) { // calm swirl of foam that slowly tightens
       const sw = clamp(p / 0.9, 0, 1), n = 16;
@@ -2005,6 +2005,18 @@
     const x = Math.round(O.W * 0.72), y = Math.round(ySurf - ds.h * 2 + 6 + Math.sin(O.t * 1.6) * 1.5);
     ctx.globalAlpha = O.tmix; ctx.drawImage(ds.c, x, y, ds.w * 2, ds.h * 2); ctx.globalAlpha = 1;
   }
+  // cosmetic trail streaming up behind the duck while it sinks
+  function drawTrail(ctx, cx, top) {
+    const kind = O.skin.trail, len = 34;
+    for (let k = 0; k < len; k += 2) {
+      const a = 0.8 * (1 - k / len), y = Math.round(top - 4 - k), wob = Math.round(Math.sin(O.t * 9 + k * 0.35) * 1.5);
+      ctx.globalAlpha = a;
+      if (kind === 'rainbow') { ['#ff3f6a', '#ff9a2a', '#ffe14a', '#7dff6a', '#4ad0ff', '#c58bff'].forEach((col, b) => { ctx.fillStyle = col; ctx.fillRect(Math.round(cx - 6 + b * 2 + wob), y, 2, 2); }); }
+      else if (kind === 'fire') { ctx.fillStyle = k < 10 ? '#fff3b0' : k < 20 ? '#ffb020' : '#ff4d2a'; const w = Math.max(1, 8 - Math.floor(k / 5)); ctx.fillRect(Math.round(cx - w / 2 + wob), y, w, 2); }
+      else if (kind === 'sparkle' && (k + Math.floor(O.t * 12)) % 6 === 0) { ctx.fillStyle = k % 4 ? '#ffffff' : '#ffe14a'; const sx = Math.round(cx + Math.sin(k * 1.7 + O.t * 3) * 7); ctx.fillRect(sx, y - 1, 1, 3); ctx.fillRect(sx - 1, y, 3, 1); }
+    }
+    ctx.globalAlpha = 1;
+  }
   function drawShrimp(ctx) {
     if (!O.showShrimp) return;
     if (O.view === 'intro' && O.flushT0 && flushP() < 1 && !O.reduced) return; // still spinning in the bowl
@@ -2014,7 +2026,8 @@
     const bob = O.sinking ? 0 : Math.round(Math.sin(O.t * 2.2) * 1.5);
     const m = O.shrimpM;
     if (m > 800) glow(ctx, sx + 8, sy + 5, 18, [140, 220, 255], clamp((m - 800) / 3000, 0, 1) * 0.08);
-    const cs = sprite('duck' + frame); const k2 = 1;
+    const cs = sprite('duck' + frame, O.skin.duckTint); const k2 = 1;
+    if (O.skin.trail && O.sinking) drawTrail(ctx, sx + cs.w / 2, Math.round(sy) + bob + 2);
     glow(ctx, sx + cs.w / 2, Math.round(sy) + bob + cs.h / 2, 12, [255, 214, 60], 0.18);
     ctx.drawImage(cs.c, sx, Math.round(sy) + bob, cs.w * k2, cs.h * k2);
     // idle bubbles
@@ -2105,6 +2118,7 @@
     },
     setView(v, instant) { O.view = v; O.showShrimp = v === 'game' || v === 'intro'; if (instant) O.topM = viewTop(); },
     setReduced(r) { O.reduced = !!r; },
+    setSkin(s) { O.skin = Object.assign({}, s || {}); },
     setEndless(v) { O.endless = !!v; },
     // first prompt: flush the duck down the toilet, then drop it into the water under the toilet
     flush() {

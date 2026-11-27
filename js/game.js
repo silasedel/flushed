@@ -22,9 +22,18 @@
   // You start with R$1,000. Normal games are free and pay nothing. Ranked: buy in at the "market price" for the
   // number of prompts, get paid R$1 per 5 points. The price sits ~10% above what an average player wins back, so
   // beating the average = profit and the house keeps a small edge. See ROBLOX.md, "Money" for the real-Roblox rules.
-  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 20, HOUSE_EDGE = 1.08, AVG_PER_PROMPT = 25.45; // R$1 per 20 pts; price ~8% over the average payout (5: R$7, 7: R$10, 10: R$14)
+  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 20, AVG_PER_PROMPT = 25.45; // R$1 per 20 pts
   const rankedLen = () => (LENGTHS.includes(store.settings.len) && store.settings.len ? store.settings.len : 10);
-  const marketPrice = len => Math.ceil((AVG_PER_PROMPT * len / RANKED_RATE) * HOUSE_EDGE);
+  // The buy-in follows how players ACTUALLY score (recent prompts), not a fixed guess: if people get better the price
+  // rises, if they get worse it falls. Price = average payout for that length + the house cut, so on average the house
+  // always takes in more than it pays out. Web: this device's recent prompts blended with the model. Roblox: every
+  // player's recent ranked prompts (DataStore), same formula.
+  const HOUSE_CUT = 1.1, PRIOR_PROMPTS = 40;
+  function avgPerPrompt() {
+    const recent = cleanGames().slice(-40).flatMap(e => e.results.map(r => r.score || 0)).slice(-300);
+    return (AVG_PER_PROMPT * PRIOR_PROMPTS + recent.reduce((a, b) => a + b, 0)) / (PRIOR_PROMPTS + recent.length);
+  }
+  const marketPrice = len => Math.max(1, Math.ceil((avgPerPrompt() * len / RANKED_RATE) * HOUSE_CUT));
   const coinsFor = (score, ranked) => (ranked ? Math.floor(score / RANKED_RATE) : 0);
   let coinImg = '';
   const coinTag = n => `<span class="coin">${coinImg ? `<img class="pix coin-ico" src="${coinImg}" alt="">` : ''}${Number(n).toLocaleString('en-US')}</span>`;
@@ -222,6 +231,7 @@
       store.coins = (store.coins ?? START_COINS) - price; Sound.click();
     }
     G = newGame(mode, key);
+    if (mode === 'ranked' && (store.boosts || {}).time > 0) { store.boosts.time--; G.extraMs = 5000; toast('Extra Time boost: +5s every prompt'); }
     store.active = G; save(); renderCoins();
     Sound.start();
     Ocean.setDepth(0, { instant: true });
@@ -235,7 +245,7 @@
     if (fresh) { // first prompt: the duck gets flushed down the toilet before the clock starts
       G.phase = 'intro'; G.phaseEnd = Date.now() + INTRO_MS;
       Ocean.setView('intro', true); Ocean.flush(); Sound.flush();
-    } else { G.phase = 'answering'; G.phaseEnd = Date.now() + ANSWER_MS; Sound.go(); }
+    } else { G.phase = 'answering'; G.phaseEnd = Date.now() + answerMs(); Sound.go(); }
     save(); renderQuestion();
   }
 
@@ -244,13 +254,13 @@
   function tick() {
     if (!G || G.pausedLeft !== undefined) return;
     const now = Date.now();
-    if (G.phase === 'reading') { setPhase('answering', ANSWER_MS); renderPhase(); // legacy saved state
+    if (G.phase === 'reading') { setPhase('answering', answerMs()); renderPhase(); // legacy saved state
     } else if (G.phase === 'intro') {
       const left = G.phaseEnd - now; $('#intro-n').textContent = Math.max(1, Math.ceil(left / 1000));
-      if (left <= 0) { setPhase('answering', ANSWER_MS); Sound.go(); Ocean.setView('game'); Ocean.setShrimpX(null); Ocean.setDepth(0, { duration: 900 }); renderPhase(); }
+      if (left <= 0) { setPhase('answering', answerMs()); Sound.go(); Ocean.setView('game'); Ocean.setShrimpX(null); Ocean.setDepth(0, { duration: 900 }); renderPhase(); }
     } else if (G.phase === 'answering') {
       const left = Math.max(0, G.phaseEnd - now);
-      const frac = left / ANSWER_MS; const sec = Math.ceil(left / 1000);
+      const frac = left / answerMs(); const sec = Math.ceil(left / 1000);
       $('#timer-num').textContent = sec;
       $('#timer-ring').style.strokeDashoffset = String(157.08 * (1 - frac));
       $('#timer-hand').setAttribute('transform', `rotate(${(-360 * (1 - frac)).toFixed(1)} 32 32)`);
@@ -322,7 +332,8 @@
     if (val) { const m = match(curQ(), val); if (m) return accept(m.answer, val); const mc = window.Match.matchContained(curQ(), val); if (mc) return accept(mc.answer, val, titleCase(val), window.Match.containedScore(mc.answer.score)); if (!G.tries.includes(val)) G.tries.push(val); }
     miss('time');
   }
-  function skip() { if (G && G.phase === 'answering') miss('skip'); else if (G && G.phase === 'reading') { setPhase('answering', ANSWER_MS); renderPhase(); } }
+  function skip() { if (G && G.phase === 'answering') miss('skip'); else if (G && G.phase === 'reading') { setPhase('answering', answerMs()); renderPhase(); } }
+  const answerMs = () => ANSWER_MS + ((G && G.extraMs) || 0);
 
   function next() {
     if (!G || G.phase !== 'reveal') return;
@@ -821,6 +832,60 @@
       <p class="fine">Games where you used a cheat code still count as played, but not toward your best or average.</p>
       <button class="btn btn-ghost small" id="btn-reset-stats">RESET STATISTICS</button>`;
   }
+  // ---------- Shop ----------
+  // Cosmetics are pure profit (no effect on score). The one boost is priced well above what it adds to an average payout.
+  const SHOP = [
+    { id: 'duck-gold', type: 'duck', name: 'Golden Duck', price: 250, tint: '~#ffcc33' },
+    { id: 'duck-ninja', type: 'duck', name: 'Ninja Duck', price: 150, tint: '~#4a4f5e' },
+    { id: 'duck-bubblegum', type: 'duck', name: 'Bubblegum Duck', price: 100, tint: '~#ff7ac8' },
+    { id: 'duck-ice', type: 'duck', name: 'Ice Duck', price: 100, tint: '~#9fe8ff' },
+    { id: 'duck-toxic', type: 'duck', name: 'Toxic Duck', price: 120, tint: '~#7dff6a' },
+    { id: 'duck-void', type: 'duck', name: 'Void Duck', price: 300, tint: '~#8a5cff' },
+    { id: 'toilet-gold', type: 'toilet', name: 'Golden Throne', price: 400, sprite: 'goldtoilet' },
+    { id: 'toilet-pink', type: 'toilet', name: 'Pink Porcelain', price: 150, tint: '~#ffb3d9' },
+    { id: 'toilet-obsidian', type: 'toilet', name: 'Obsidian Throne', price: 250, tint: '~#4a4458' },
+    { id: 'trail-rainbow', type: 'trail', name: 'Rainbow Trail', price: 200, trail: 'rainbow' },
+    { id: 'trail-sparkle', type: 'trail', name: 'Sparkle Trail', price: 120, trail: 'sparkle' },
+    { id: 'trail-fire', type: 'trail', name: 'Fire Trail', price: 175, trail: 'fire' },
+    { id: 'boost-time', type: 'boost', name: 'Extra Time', note: '+5s every prompt, next ranked run', price: 5 },
+  ];
+  function applySkin() {
+    const eq = store.equip || {}, byId = id => SHOP.find(s => s.id === id) || {};
+    const d = byId(eq.duck), tl = byId(eq.toilet), tr = byId(eq.trail);
+    Ocean.setSkin({ duckTint: d.tint, toiletSprite: tl.sprite, toiletTint: tl.tint, trail: tr.trail });
+  }
+  function shopHtml() {
+    const own = store.owned || {}, eq = store.equip || {}, c = store.coins ?? START_COINS;
+    const preview = s => { const sp = Ocean.sprite(s.type === 'toilet' ? (s.sprite || 'toilet') : s.type === 'duck' ? 'duck0' : 'robux', s.tint); return s.type === 'trail' ? `<span class="trail-sw trail-${s.trail}"></span>` : s.type === 'boost' ? '<span class="boost-sw">+5s</span>' : `<img class="pix shop-img" src="${sp.c.toDataURL()}" alt="">`; };
+    const group = (type, title) => `<h3 class="mh">${title}</h3><div class="shop-grid">${SHOP.filter(s => s.type === type).map(s => {
+      const owned = own[s.id], on = eq[s.type] === s.id;
+      const btn = s.type === 'boost' ? `<button class="shop-btn" data-buy="${s.id}" ${c < s.price ? 'disabled' : ''}>BUY ${coinTag(s.price)}</button><span class="shop-have">have ${((store.boosts || {}).time) || 0}</span>`
+        : owned ? `<button class="shop-btn ${on ? 'on' : ''}" data-equip="${s.id}">${on ? 'EQUIPPED' : 'EQUIP'}</button>`
+        : `<button class="shop-btn" data-buy="${s.id}" ${c < s.price ? 'disabled' : ''}>BUY ${coinTag(s.price)}</button>`;
+      return `<div class="shop-item">${preview(s)}<b>${s.name}</b>${s.note ? `<small>${s.note}</small>` : ''}${btn}</div>`;
+    }).join('')}</div>`;
+    return `<p class="shop-bal">Balance ${coinTag(c)}</p>${group('duck', 'DUCKS')}${group('toilet', 'TOILETS')}${group('trail', 'TRAILS')}${group('boost', 'BOOSTS')}
+      <p class="fine">${Object.keys(own).length ? `<button class="link-btn" data-equip="default">Use the default look</button>` : ''}</p>`;
+  }
+  function openShop() {
+    openModal('SHOP', shopHtml());
+    const wireShop = () => {
+      $$('#modal [data-buy]').forEach(b => b.addEventListener('click', () => {
+        const s = SHOP.find(x => x.id === b.dataset.buy); const c = store.coins ?? START_COINS; if (!s || c < s.price) return;
+        store.coins = c - s.price;
+        if (s.type === 'boost') { store.boosts = store.boosts || {}; store.boosts.time = (store.boosts.time || 0) + 1; }
+        else { store.owned = store.owned || {}; store.owned[s.id] = true; store.equip = store.equip || {}; store.equip[s.type] = s.id; applySkin(); }
+        save(); Sound.correct(60); renderCoins(); $('#modal .modal-body').innerHTML = shopHtml(); wireShop();
+      }));
+      $$('#modal [data-equip]').forEach(b => b.addEventListener('click', () => {
+        store.equip = store.equip || {};
+        if (b.dataset.equip === 'default') store.equip = {};
+        else { const s = SHOP.find(x => x.id === b.dataset.equip); store.equip[s.type] = store.equip[s.type] === s.id ? undefined : s.id; }
+        save(); applySkin(); Sound.click(); $('#modal .modal-body').innerHTML = shopHtml(); wireShop();
+      }));
+    };
+    wireShop();
+  }
   function resetRobux() { store.coins = START_COINS; save(); renderCoins(); toast('Pretend Robux reset to R$1,000'); }
   function openStats() {
     openModal('STATISTICS', statsHtml());
@@ -972,6 +1037,7 @@
     if (act === 'quit') return quitDive();
     if (act === 'restart') return restartDive();
     if (act === 'stats') return openStats();
+    if (act === 'shop') return openShop();
     if (act === 'settings') return openSettings();
     if (act === 'help') return openHelp();
   }
@@ -1015,6 +1081,7 @@
     $('#btn-res-archive').addEventListener('click', () => { Sound.click(); showArchive(); });
     $('#btn-stats2').addEventListener('click', openStats);
     $('#btn-stats-title').addEventListener('click', () => { Sound.click(); openStats(); });
+    $('#btn-shop').addEventListener('click', () => { Sound.click(); openShop(); });
     $('#btn-res-packs').addEventListener('click', () => { Sound.click(); showPacks(); });
     $('#btn-share').addEventListener('click', copyShare);
     $('#btn-share2').addEventListener('click', async () => { if (navigator.share && resultsEntry) { try { await navigator.share({ text: shareText(resultsEntry) }); return; } catch (e) { if (e.name === 'AbortError') return; } } copyShare(); });
@@ -1080,7 +1147,7 @@
     Ocean.init($('#ocean'));
     try { coinImg = Ocean.sprite('robux').c.toDataURL(); } catch (e) { /* no sprite yet */ }
     if (store.robuxV !== 1) { store.robuxV = 1; store.coins = START_COINS; save(); } // switch to pretend Robux: everyone starts at R$1,000
-    applySettings(); wire(); buildGauge(); renderCoins();
+    applySettings(); wire(); buildGauge(); renderCoins(); applySkin();
     if (!QS.length) { document.body.insertAdjacentHTML('beforeend', '<p style="position:fixed;bottom:8px;left:8px;color:#f66">Question database failed to load.</p>'); }
     // Reloading mid-game ends that game and starts a fresh one (endless runs with answers are saved first).
     const A = store.active;
