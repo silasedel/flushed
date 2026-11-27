@@ -652,7 +652,7 @@
     drawStack(entry);
     const cl = $('#res-coins');
     if (entry.cheated) cl.innerHTML = 'Cheat code used · no Robux this time';
-    else if (entry.ranked) { const net = (entry.coins || 0) - (entry.price || 0); cl.innerHTML = `Bought in ${coinTag(entry.price)} · paid out ${coinTag(entry.coins || 0)} · <b class="${net >= 0 ? 'up' : 'down'}">${net >= 0 ? '+' : ''}${net} ${net >= 0 ? 'profit' : 'loss'}</b>`; }
+    else if (entry.ranked) cl.innerHTML = `Paid out ${coinTag(entry.coins || 0)}`;
     else cl.innerHTML = `Free game · play <b>Ranked</b> to win Robux`;
     renderCoins();
     // bearing
