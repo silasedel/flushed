@@ -41,6 +41,628 @@
   // ---------- sprites ----------
   // Each sprite: rows of chars, palette maps char -> color. '.' is transparent.
   const SPR = {
+    // ---- floating junk, zone by zone ----
+    partyMouseCF: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#7dff6a', 'c': '#ff3fb4', 'y': '#ffffff'}, r: [
+      '......................y.........',
+      '......................H.........',
+      '.....................HHH........',
+      '....................kHccc.......',
+      '...................kccHHH.......',
+      '..................khHHHHH.......',
+      '.................khHHHHHHHk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      '......khhGGGGGGGGGGGGGGGGGGGgk..',
+      '.....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '....khtGGGGGGGGGGGGGGGGGGGGGggkk',
+      '....ttGGGGGGGGGGGGGGGGGGggggkk..',
+      '...t.khGGGGGGGGGGGGGGGGgkkkk....',
+      '.tt...khgGGGGGGGGGGGGggkk.......',
+      't......kkhggggGGgGGggkkhhk......',
+      't......khgkkkkhgkhgkk.khgk......',
+      '.......khgk..khgkhgk...kk.......',
+      '........kk....kk.kk.............',
+    ] },
+    partyMouseBF: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#4ad0ff', 'c': '#ffe14a', 'y': '#ffffff'}, r: [
+      '......................y.........',
+      '......................H.........',
+      '.....................HHH........',
+      '....................kHccc.......',
+      '...................kccHHH.......',
+      '..................khHHHHH.......',
+      '.................khHHHHHHHk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      '......khhGGGGGGGGGGGGGGGGGGGgk..',
+      '.....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '....khtGGGGGGGGGGGGGGGGGGGGGggkk',
+      '....ttGGGGGGGGGGGGGGGGGGggggkk..',
+      '...t.khGGGGGGGGGGGGGGGGgkkkk....',
+      '.tt...khgGGGGGGGGGGGGggkk.......',
+      't......kkhggggGGgGGggkkhhk......',
+      't......khgkkkkhgkhgkk.khgk......',
+      '.......khgk..khgkhgk...kk.......',
+      '........kk....kk.kk.............',
+    ] },
+    partyMouseF: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#ff3fb4', 'c': '#7dff6a', 'y': '#ffffff'}, r: [
+      '......................y.........',
+      '......................H.........',
+      '.....................HHH........',
+      '....................kHccc.......',
+      '...................kccHHH.......',
+      '..................khHHHHH.......',
+      '.................khHHHHHHHk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      '......khhGGGGGGGGGGGGGGGGGGGgk..',
+      '.....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '....khtGGGGGGGGGGGGGGGGGGGGGggkk',
+      '....ttGGGGGGGGGGGGGGGGGGggggkk..',
+      '...t.khGGGGGGGGGGGGGGGGgkkkk....',
+      '.tt...khgGGGGGGGGGGGGggkk.......',
+      't......kkhggggGGgGGggkkhhk......',
+      't......khgkkkkhgkhgkk.khgk......',
+      '.......khgk..khgkhgk...kk.......',
+      '........kk....kk.kk.............',
+    ] },
+    crownMouseF: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#000', 'c': '#000', 'y': '#ffffff'}, r: [
+      '...................Y..Y..Y......',
+      '...................YYYYYYY......',
+      '...................YYYrYYY......',
+      '...................YYYYYYY......',
+      '...................khhk.........',
+      '..................khGGhk........',
+      '.................khGppGhkkk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      '......khhGGGGGGGGGGGGGGGGGGGgk..',
+      '.....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '....khtGGGGGGGGGGGGGGGGGGGGGggkk',
+      '....ttGGGGGGGGGGGGGGGGGGggggkk..',
+      '...t.khGGGGGGGGGGGGGGGGgkkkk....',
+      '.tt...khgGGGGGGGGGGGGggkk.......',
+      't......kkhggggGGgGGggkkhhk......',
+      't......khgkkkkhgkhgkk.khgk......',
+      '.......khgk..khgkhgk...kk.......',
+      '........kk....kk.kk.............',
+    ] },
+    rat1: { p: {'k': '#14141c', 'G': '#7a6a62', 'h': '#a89688', 'g': '#4e423c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#d88a9a', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#000', 'c': '#000', 'y': '#ffffff'}, r: [
+      '....................kk..........',
+      '...................khhk.........',
+      '..................khGGhk........',
+      '.................khGppGhkkk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      '......khhGGGGGGGGGGGGGGGGGGGgk..',
+      '.....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '....khtGGGGGGGGGGGGGGGGGGGGGggkk',
+      '....ttGGGGGGGGGGGGGGGGGGggggkk..',
+      '...t.khGGGGGGGGGGGGGGGGgkkkk....',
+      '.tt...khgGGGGGGGGGGGGggkk.......',
+      't......kkhggggGGgGGggkkhhk......',
+      't......khgkkkkhgkhgkk.khgk......',
+      '.......khgk..khgkhgk...kk.......',
+      '........kk....kk.kk.............',
+    ] },
+    rat0: { p: {'k': '#14141c', 'G': '#7a6a62', 'h': '#a89688', 'g': '#4e423c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#d88a9a', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#000', 'c': '#000', 'y': '#ffffff'}, r: [
+      '....................kk..........',
+      '...................khhk.........',
+      '..................khGGhk........',
+      '.................khGppGhkkk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      't.....khhGGGGGGGGGGGGGGGGGGGgk..',
+      't....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '..t.kttGGGGGGGGGGGGGGGGGGGGGggkk',
+      '...tthGGGGGGGGGGGGGGGGGGggggkk..',
+      '.....khGGGGGGGGGGGGGGGGgkkkk....',
+      '......khgGGGGGGGGGGGGggk........',
+      '.......kkhGggGGgggGGgkhhk.......',
+      '........khgkkhgkkkhgkkhgk.......',
+      '........khgkkhgk.khgk.kk........',
+      '.........kk..kk...kk............',
+    ] },
+    tpWad: { p: {'k': '#5d6670', 'W': '#f4f6f8', 'h': '#ffffff', 'g': '#c9d0d8', 'c': '#a9b3bd', 'd': '#9aa5b0'}, r: [
+      '............kkkkkk.........',
+      '..........kkhhhhhhkk.......',
+      '.....kkkkkhhWWWWWWhhk......',
+      '....khhhhhWWWcWWWWWgkkk....',
+      '...khWWWWWWWWWcWWWWWhhhkk..',
+      '..khWWWWWWWWWWcWWWWWWWWhhk.',
+      '.khWWWcWWWWWWWWcWWWWWWWWWhk',
+      '.khWWWWcWWWWWWWcWWWWWWWWWgk',
+      '.khWWWWWccWWWWWcWWWWWWWWWgk',
+      '.khWWWWWWWcWWWcWWWWWWccWWgk',
+      'khWWWWWWWWWWWWcWWWWccWWWWgk',
+      'khWWWWWWWWWWWWWWWWcWWWWWWgk',
+      'khWWWWWWWWWWWWWWWWWWWWWWgk.',
+      'khWWWWWWcWWWWWWWWWWWWWWWgk.',
+      '.khWWWWWWccWWWWWWWWWWWWWgk.',
+      '..khgggggggccggggggggggggk.',
+      '...kkkhgggggggggggggggggk..',
+      '......kkhdddddkhdddddddk...',
+      '........kkkkkk.kkkkkkkk....',
+    ] },
+    tpSheet: { p: {'k': '#6d7680', 'W': '#f4f6f8', 'h': '#ffffff', 'g': '#c9d0d8', 'q': '#d8dee5', 'p': '#9aa5b0'}, r: [
+      '...................kkkk..',
+      '...........kkkkkkkkhhhhk.',
+      '.kkkkkkkkkkhhhhhhhhWhghk.',
+      'khhhhhhhhhhWWWWWWWWWWhhk.',
+      'kqWWWWqWWWWqWWWWqWWWWqhk.',
+      'khWWWWWWWWWWWWWWWWWWWWgk.',
+      'khWWWWWWWWWWpppppppppppk.',
+      'khppppppppppWWWqWWWWqWgk.',
+      'khWWWWWWWWWWWWWWWWWWWWgk.',
+      '.khWWWWWWWWWWWWWWWWWWWgk.',
+      '.khWqWWWWqWWWWqWWWWqWWWhk',
+      '.khWWWWWWWWWWWWWWWWWWWWgk',
+      '.khWWWWWWWWWWgggggggggggk',
+      '.khqggggqggggkkkkkkkkkkk.',
+      '.khkkkkkkkkkk............',
+      '..k......................',
+    ] },
+    flossPick: { p: {'k': '#0f3a40', 'T': '#2fc9b8', 't': '#9ff3ea', 'D': '#1a8a80', 's': '#ffffff'}, r: [
+      '...................kk.....kk..',
+      '..................kttkkkkkttk.',
+      '..................ktsssssssDk.',
+      '.................ktTDkkkkktTtk',
+      '.................ktTDk...ktTDk',
+      '......kkkkkkkkkkkktTDk...ktTDk',
+      '...kkkttttttttttttTTDk...ktTDk',
+      '.kktttTTTTTTTTTTTTTTDkkkkktTDk',
+      'ktttDDTTTTTTTTTTTTTTTtttttTTDk',
+      '.kkkkktDDDDDDDDDDDTTTTTTTTTTDk',
+      '......kkkkkkkkkkkktDDDDDDDDDDk',
+      '..................kkkkkkkkkkk.',
+    ] },
+    qtip: { p: {'k': '#7a8290', 'W': '#f6f8fa', 'h': '#ffffff', 'g': '#d3d9e0', 'S': '#cfe6ff', 's': '#9fbad6'}, r: [
+      '..kkkk..............kkkk..',
+      '.khhhhk............khhhhk.',
+      'khWWWWhkkkkkkkkkkkkhWWWWhk',
+      'hWWWWWWhhhhhhhhhhhhWWWWWWh',
+      'hWWWWWWgssssssssssgWWWWWWg',
+      'khWWWWgkkkkkkkkkkkkhWWWWgk',
+      '.khgggk............khgggk.',
+      '..kkkk..............kkkk..',
+    ] },
+    gum: { p: {'k': '#8e2a5a', 'P': '#ff8fc6', 'p': '#ffd0e8', 'D': '#d85a98'}, r: [
+      '....kkkkkk....',
+      '..kkppppppkk..',
+      '.kppPPPPPPppk.',
+      'kpPPPPPPPPPPpk',
+      'kpPPPDPPPPPPDk',
+      'kpPPPPPPPPPPDk',
+      'kpPPPPPPPDPPDk',
+      '.kpDPPPPPPDDk.',
+      '..kkpDDDDDkk..',
+      '....kkkkkk....',
+    ] },
+    bandaid: { p: {'k': '#8a5a34', 'B': '#e8b07a', 'b': '#f6cfa0', 'd': '#c98a54', 'P': '#fff3e6'}, r: [
+      '..kkkkkkkkkkkkkkkkkkk...',
+      '.kbbbbbbbbbbbbbbbbbbbk..',
+      'kbBBBBBBBPPPPPPBBBBBBbk.',
+      'bBBBBdBBBPPPPPPBBdBBBBbk',
+      'bBBBBBBBBPPPPPPBBBBBBBdk',
+      'bBBdBBBBBPPPPPPBBBBBdBdk',
+      'bBBBBdBBBPPPPPPBBdBBBBdk',
+      'kbBBBBBBBPPPPPPBBBBBBdk.',
+      '.kbddddddddddddddddddk..',
+      '..kkkkkkkkkkkkkkkkkkk...',
+    ] },
+    soapBar: { p: {'k': '#3a6a8a', 'S': '#9fe0ff', 's': '#dff6ff', 'h': '#ffffff', 'D': '#5fb0e0', 'b': '#e8fbff'}, r: [
+      '.............kbbk...',
+      '...kk.......kbbbbk..',
+      '..kbbk......kbbbbkk.',
+      '..kbbkkkkkkkkkbbkbbk',
+      '...kkksssssssskkkbbk',
+      '..ksssSSSSSSSSssskk.',
+      '.ksShhhhhhhhhhSSSsk.',
+      'ksShhhhhhhhhhhhSSSsk',
+      'ksSShhhhhhhhhhSSSSDk',
+      'ksSSSSSSSSSSSSSSSSDk',
+      'ksSSSSSSSSSSSSSSSSDk',
+      'ksSSSSSSSSSSSSSSSSDk',
+      '.ksDSSSSSSSSSSSSDDk.',
+      '..kksDSSSSSSSSDDkk..',
+      '....kksDDDDDDDkk....',
+      '......kkkkkkkk......',
+    ] },
+    ring: { p: {'k': '#5a3a08', 'Y': '#ffd23f', 'y': '#fff3b0', 'D': '#c99a20', 'G': '#7ae8ff', 'x': '#ffffff'}, r: [
+      '.....kkkkkkk....',
+      '....kGGGGGGGk...',
+      '...kGGxxGGGGGk..',
+      '..kGGGGGGGxGGGk.',
+      '...kGGGGGGGGGk..',
+      '..kyyYGGGGGyyk..',
+      '.kyYDDkGGGyDYyk.',
+      'kyYDkk.kGkkkyYyk',
+      'kyYDk...k..kyYDk',
+      'kyYDk......kyYDk',
+      'kyYDkk....kkyYDk',
+      '.kyYyykkkkyyYDk.',
+      '..kyDYyyyyYDDk..',
+      '...kkyDDDDDkk...',
+      '.....kkkkkk.....',
+    ] },
+    lego: { p: {'k': '#4a0808', 'R': '#ff3a3a', 'r': '#ff9a9a', 'D': '#b81a1a'}, r: [
+      '..kkk.kkk..kkk.kkk..',
+      '.krrrkrrrkkrrrkrrrk.',
+      '.krrDkrrDkkrrDkrrDk.',
+      '.krRDkrRDkkrRDkrRDk.',
+      'krRRRrRRRrrRRRrRRRrk',
+      'krRRRRRRRRRRRRRRRRDk',
+      'krRRRRRRRRRRRRRRRRDk',
+      'krRRRRRRRRRRRRRRRRDk',
+      'krRRRRRRRRRRRRRRRRDk',
+      'krRRRRRRRRRRRRRRRRDk',
+      'krRRRRRRRRRRRRRRRRDk',
+      'krRRRRRRRRRRRRRRRRDk',
+      'krDDDDDDDDDDDDDDDDDk',
+      '.kkkkkkkkkkkkkkkkkk.',
+    ] },
+    keys: { p: {'k': '#2a2a34', 'Y': '#e0b040', 'y': '#fff0a0', 'D': '#a07a20', 'S': '#c8ccd6', 's': '#ffffff', 'd': '#8a8ea0', 'B': '#ff5a5a'}, r: [
+      '....kkkk.................',
+      '..kkyyyykkkkkk...........',
+      '.kyyDDDDyyssssk..........',
+      '.kyDkkkkySSSSSskkkkkkkkk.',
+      'kyDk....ksSSSSSsssssssssk',
+      'kyDk....ksSSSSSSSSSSSSSdk',
+      'kyDk....ksSSSSdddddSSdSdk',
+      'kyDk...kBBBBSdkkkkksdksdk',
+      '.kyykkkkBBBBBBBBBBBSdksdk',
+      '.kyDyyyyBBBBBBBBBBBddkkk.',
+      '..kkyDDDBBBBkkkkkkkkk....',
+      '....kkkkkkkk.............',
+    ] },
+    phone: { p: {'k': '#0a0a0e', 'B': '#2a2a34', 'b': '#4a4a58', 's': '#2a8ad0', 'a': '#ffffff', 'c': '#ff5a8a', 'w': '#9fe8ff'}, r: [
+      '.kkkkkkkkkkkkkk.',
+      'kbbbbbbbbbbbbbbk',
+      'kbBBBBkkkkBBBBk.',
+      'kbBBBBBBBBBBBBk.',
+      'kbBssssssssssBk.',
+      'kbBssssssssssBk.',
+      'kbBsaasccsaasBk.',
+      'kbBsaasccsaasBk.',
+      'kbBssssssssssBk.',
+      'kbBssssssssssBk.',
+      'kbBsccsaasccsBk.',
+      'kbBsccsaasccsBk.',
+      'kbBssssssssssBk.',
+      'kbBssssssssssBk.',
+      'kbBsaasaassssBk.',
+      'kbBsaasaassssBk.',
+      'kbBssssssssssBk.',
+      'kbBssssssssssBk.',
+      'kbBswwwwwwwwsBk.',
+      'kbBssssssssssBk.',
+      'kbBssssssssssBk.',
+      'kbBBBBBBBBBBBBk.',
+      'kbBBBBbbbbBBBBk.',
+      'kbBBBBBBBBBBBBk.',
+      'kbkkkkkkkkkkkkk.',
+      '.k..............',
+    ] },
+    coin: { p: {'k': '#6a4a08', 'Y': '#f3cd66', 'y': '#fff3b0', 'D': '#c99a35'}, r: [
+      '....kkkk....',
+      '..kkyyyykk..',
+      '.kyyYYYYyyk.',
+      '.kyYYYYYYDk.',
+      'kyYYDDDDYYyk',
+      'kyYYDyDDYYDk',
+      'kyYYDDDDYYDk',
+      'kyYYDDDDYYDk',
+      '.kyYYYYYYDk.',
+      '.kyDYYYYDDk.',
+      '..kkyDDDkk..',
+      '....kkkk....',
+    ] },
+    duckling: { p: {'k': '#3a2a04', 'y': '#ffd23f', 'h': '#fff2a6', 'd': '#d99a10', 'o': '#ff8a1f', 'e': '#141414'}, r: [
+      '..........kkkk....',
+      '.........khhhhk...',
+      '........khyyyyhk..',
+      '....kkkkkhyyeydk..',
+      '..kkhhhhhyyyyyyokk',
+      '.khhyyyyyyyyyydooo',
+      'khyyyyyyyyyyydkokk',
+      'khyyyyyyyyyydk.k..',
+      'khyyyyyyyyyydk....',
+      'khyyyyyyyyyydk....',
+      '.khdyyyyyyddk.....',
+      '..kkhdddddkk......',
+      '....kkkkkk........',
+    ] },
+    mouse0: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#000', 'c': '#000', 'y': '#ffffff'}, r: [
+      '....................kk..........',
+      '...................khhk.........',
+      '..................khGGhk........',
+      '.................khGppGhkkk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      't.....khhGGGGGGGGGGGGGGGGGGGgk..',
+      't....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '..t.kttGGGGGGGGGGGGGGGGGGGGGggkk',
+      '...tthGGGGGGGGGGGGGGGGGGggggkk..',
+      '.....khGGGGGGGGGGGGGGGGgkkkk....',
+      '......khgGGGGGGGGGGGGggk........',
+      '.......kkhGggGGgggGGgkhhk.......',
+      '........khgkkhgkkkhgkkhgk.......',
+      '........khgkkhgk.khgk.kk........',
+      '.........kk..kk...kk............',
+    ] },
+    mouse1: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#000', 'c': '#000', 'y': '#ffffff'}, r: [
+      '....................kk..........',
+      '...................khhk.........',
+      '..................khGGhk........',
+      '.................khGppGhkkk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      '......khhGGGGGGGGGGGGGGGGGGGgk..',
+      '.....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '....khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '....khtGGGGGGGGGGGGGGGGGGGGGggkk',
+      '....ttGGGGGGGGGGGGGGGGGGggggkk..',
+      '...t.khGGGGGGGGGGGGGGGGgkkkk....',
+      '.tt...khgGGGGGGGGGGGGggkk.......',
+      't......kkhggggGGgGGggkkhhk......',
+      't......khgkkkkhgkhgkk.khgk......',
+      '.......khgk..khgkhgk...kk.......',
+      '........kk....kk.kk.............',
+    ] },
+    roach: { p: {'k': '#140802', 'B': '#7a3a14', 'h': '#c0703a', 'D': '#4a2008', 'b': '#3a1a08', 'l': '#3a1a08'}, r: [
+      '.k....klk.....k......',
+      'klk...klk....klk....k',
+      '.klk..kklkkkklk....kl',
+      '..klkkhhlbhhklk....kl',
+      '..khlhBBBbBBlhhkkkkkl',
+      '.khBBBBBBbBBBBBhhhhlk',
+      'khBBBBBBBbBBBBBBBBBlk',
+      'khBBBBBBBbBBBBBBBBBDk',
+      'khBBBBBBBbBBBBBBBBBDk',
+      'khBBBBBBBbBBBBBBBBBDk',
+      '.khBBBBBBbBBBBBDDDDlk',
+      '..khDDBBBbBBDDDkkkklk',
+      '...klkhDDbDDlkk....kl',
+      '..klk.kklbkkklk....kl',
+      '.klk..klkk..klk....kl',
+      'klk...klk....klk....k',
+    ] },
+    pizza: { p: {'k': '#5a3010', 'C': '#e8a84a', 'c': '#ffd07a', 'D': '#b07020', 'Y': '#ffe08a', 'R': '#d8382a', 'g': '#5a9a30'}, r: [
+      '.kkkkkkkkkkkkkkkkkkkk.',
+      'kcccccccccccccccccccck',
+      'kcCCCCCCCCCCCCCCCCCCDk',
+      'kcCCCCCCCCCCCCRRCCCCDk',
+      '.kYYYggYYYYYYRRRRYYYk.',
+      '..kYRRRRYYYYRRRRRYYk..',
+      '..kYRRRRYYYRRRRRYYYk..',
+      '...kYRRYYYYRRRRYYYk...',
+      '...kYYYYYggYRRYYYYk...',
+      '....kYYYYYYYYYYYYk....',
+      '....kYYYYRRYYYYYYk....',
+      '.....kYYRRRRYYYYk.....',
+      '......kYRRRRYYYYk.....',
+      '......kYYRRYYYYk......',
+      '.......kYYYYggYk......',
+      '.......kYYYYYYk.......',
+      '........kYYYYYk.......',
+      '........kYYYYk........',
+      '.........kYYYk........',
+      '.........kYYk.........',
+      '..........kYk.........',
+      '...........k..........',
+    ] },
+    gatorEyes: { p: {'k': '#0a1a08', 'G': '#3a6a2a', 'g': '#6a9a4a', 'D': '#1e3a14', 'Y': '#f0ff4a', 'p': '#000000'}, r: [
+      '....kkkk..........kkkk....',
+      '..kkggggkk......kkggggkk..',
+      '.kggYYYYggk....kggYYYYggk.',
+      'kgGYYYpYYGgk..kgGYYYpYYGgk',
+      'kgGYYYpYYGDk..kgGYYYpYYGDk',
+      'kgGGYYpYGGDkkkkgGGYYpYGGDk',
+      'kgGGGGGGGGGggggGGGGGGGGGDk',
+      '.kgDGGGGGGGGGGGGGGGGGGDDk.',
+      '..kkgDDDDDDDDDDDDDDDDDkk..',
+      '....kkkkkkkkkkkkkkkkkk....',
+    ] },
+    crownMouse: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#000', 'c': '#000', 'y': '#ffffff'}, r: [
+      '...................Y..Y..Y......',
+      '...................YYYYYYY......',
+      '...................YYYrYYY......',
+      '...................YYYYYYY......',
+      '...................khhk.........',
+      '..................khGGhk........',
+      '.................khGppGhkkk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      't.....khhGGGGGGGGGGGGGGGGGGGgk..',
+      't....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '..t.kttGGGGGGGGGGGGGGGGGGGGGggkk',
+      '...tthGGGGGGGGGGGGGGGGGGggggkk..',
+      '.....khGGGGGGGGGGGGGGGGgkkkk....',
+      '......khgGGGGGGGGGGGGggk........',
+      '.......kkhGggGGgggGGgkhhk.......',
+      '........khgkkhgkkkhgkkhgk.......',
+      '........khgkkhgk.khgk.kk........',
+      '.........kk..kk...kk............',
+    ] },
+    cheese: { p: {'k': '#7a5410', 'Y': '#ffd23f', 'y': '#fff0a0', 'D': '#e0a820', 'h': '#c08a10'}, r: [
+      '................k.......',
+      '..............kkyk......',
+      '...........kkkyyyyk.....',
+      '.........kkyyyyyyyykk...',
+      '......kkkyyyyyyyyyyyyk..',
+      '....kkyyyhhyyyyyyyyyyyk.',
+      '.kkkyyyyyhhyyyyyyyyyyyyk',
+      'kyyyyyyyyyyyyyyYYYYYYYYk',
+      'kYYYYYYyYYYYYYYYYYYYYYYk',
+      'kYYYYYYYYYYYYYYYYYYYYYYk',
+      'kYYYYhhYYYYYhhYYYYYYYYYk',
+      'kYYYhhhhYYYYhhYYYYYYYYYk',
+      'kYYYhhhhYYYYYYYYYhhYYYYk',
+      'kYYYYhhYYYYYYYYYYhhYYYYk',
+      'kYYYYYYYYYYYYYYYYYYYYYYk',
+      'kDDDDDDDDDDDDDDDDDDDDDDk',
+      'kDDDDDDDDDDDDDDDDDDDDDDk',
+      '.kkkkkkkkkkkkkkkkkkkkkk.',
+    ] },
+    chain: { p: {'k': '#5a3a08', 'Y': '#ffd23f', 'y': '#fff3b0', 'D': '#c99a20'}, r: [
+      '..kk........kk........kk...',
+      '.kyyk.kkkk.kyyk.kkkk.kyyk..',
+      'kyDDykyyyykyDDykyyyykyDDyk.',
+      'yDkkyyDkkyyDkkyyDkkyyDkkyyk',
+      'yDkkyDDkkyDDkkyDDkkyDDkkyDk',
+      'kyyyDkyyyDkyyyDkyyyDkyyyDk.',
+      '.kyDk.kkkk.kyDk.kkkk.kyDk..',
+      '..kk........kk........kk...',
+    ] },
+    partyMouse: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#ff3fb4', 'c': '#7dff6a', 'y': '#ffffff'}, r: [
+      '......................y.........',
+      '......................H.........',
+      '.....................HHH........',
+      '....................kHccc.......',
+      '...................kccHHH.......',
+      '..................khHHHHH.......',
+      '.................khHHHHHHHk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      't.....khhGGGGGGGGGGGGGGGGGGGgk..',
+      't....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '..t.kttGGGGGGGGGGGGGGGGGGGGGggkk',
+      '...tthGGGGGGGGGGGGGGGGGGggggkk..',
+      '.....khGGGGGGGGGGGGGGGGgkkkk....',
+      '......khgGGGGGGGGGGGGggk........',
+      '.......kkhGggGGgggGGgkhhk.......',
+      '........khgkkhgkkkhgkkhgk.......',
+      '........khgkkhgk.khgk.kk........',
+      '.........kk..kk...kk............',
+    ] },
+    disco: { p: {'k': '#2a2a3a', 'a': '#ffffff', 'b': '#c8d4e8', 'c': '#8a9ab8', 'd': '#4a5a78', 'm': '#ff9fe8', 'n': '#9fe8ff'}, r: [
+      '........kkkkkk........',
+      '......kkcdaadbkk......',
+      '....kkdccdaadbbdkk....',
+      '...kddddddddddddddk...',
+      '..kdccdaadbbdccdaadk..',
+      '..kdcaaaadbbdccdaadk..',
+      '.kddaaaaaadddddmddddk.',
+      '.kcdaaaaaaccdaadbbdck.',
+      'kccdaaaaadccdaadbbdcck',
+      'kddddddddddddddddddddk',
+      'kaadbbdccdaadbbdccdaak',
+      'kaadbbdccdaadbbdccdaak',
+      'kddddddddddddddddddddk',
+      'kbbdccdaadbbdccdaadbbk',
+      '.kbdccnaadbbdccdaadbk.',
+      '.kddddddddddddmdddddk.',
+      '..kdaadbbdccdaadbbdk..',
+      '..kdaadbbdccdaadbbdk..',
+      '...kddddddddddddddk...',
+      '....kkdccdaadbbdkk....',
+      '......kkcdaadbkk......',
+      '........kkkkkk........',
+    ] },
+    boombox: { p: {'k': '#08080e', 'B': '#2a2a3a', 'b': '#4a4a5e', 'S': '#9a9ab4', 'n': '#7dff6a', 'm': '#0a2a08'}, r: [
+      '.......kkkkkkkkkkkkkk.......',
+      '......kSSSSSSSSSSSSSSk......',
+      '......kSSSSSSSSSSSSSSk......',
+      '.....kSSkkkkkkkkkkkkSSk.....',
+      '.kkkkkSkkkkkkkkkkkkkkSkkkkk.',
+      'kbbbbSSbbbbbbbbbbbbbbSSbbbbk',
+      'kbBBBBBBBBBBBBBBBBBBBBBBBBk.',
+      'kbBBkkkkkkBnnnnnnkkkkkkBBBk.',
+      'kbBkkkkkkkknmnmnnkkkkkkkBBk.',
+      'kbBkkkSSkkknnnnnnkkSSkkkBBk.',
+      'kbBkkSSSSkkBBBBBkkSSSSkkBBk.',
+      'kbBkkSSSSkkBBBBBkkSSSSkkBBk.',
+      'kbBkkkSSkkkbbbbbbkkSSkkkBBk.',
+      'kbBkkkkkkkkbbbbbbkkkkkkkBBk.',
+      'kbBBkkkkkkBBBBBBBkkkkkkBBBk.',
+      'kbBBBBBBBBBBBBBBBBBBBBBBBBk.',
+      'kbkkkkkkkkkkkkkkkkkkkkkkkkk.',
+      '.k..........................',
+    ] },
+    glowstick: { p: {'k': '#0a2a08', 'G': '#7dff6a', 'g': '#e0ffd8'}, r: [
+      '.kkkk.',
+      'kGGGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGgGGk',
+      'kGGGGk',
+      'kGGGGk',
+      '.kkkk.',
+    ] },
+    partyMouseB: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#4ad0ff', 'c': '#ffe14a', 'y': '#ffffff'}, r: [
+      '......................y.........',
+      '......................H.........',
+      '.....................HHH........',
+      '....................kHccc.......',
+      '...................kccHHH.......',
+      '..................khHHHHH.......',
+      '.................khHHHHHHHk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      't.....khhGGGGGGGGGGGGGGGGGGGgk..',
+      't....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '..t.kttGGGGGGGGGGGGGGGGGGGGGggkk',
+      '...tthGGGGGGGGGGGGGGGGGGggggkk..',
+      '.....khGGGGGGGGGGGGGGGGgkkkk....',
+      '......khgGGGGGGGGGGGGggk........',
+      '.......kkhGggGGgggGGgkhhk.......',
+      '........khgkkhgkkkhgkkhgk.......',
+      '........khgkkhgk.khgk.kk........',
+      '.........kk..kk...kk............',
+    ] },
+    partyMouseC: { p: {'k': '#14141c', 'G': '#a3a3b2', 'h': '#d0d0dc', 'g': '#6e6e7c', 'p': '#ffa3b8', 'e': '#000000', 'n': '#ff7f9c', 't': '#ffa3b8', 'Y': '#ffd23f', 'r': '#ff3f6a', 'H': '#7dff6a', 'c': '#ff3fb4', 'y': '#ffffff'}, r: [
+      '......................y.........',
+      '......................H.........',
+      '.....................HHH........',
+      '....................kHccc.......',
+      '...................kccHHH.......',
+      '..................khHHHHH.......',
+      '.................khHHHHHHHk.....',
+      '.........kkkkkkkkkhGppGGhhhkk...',
+      '.......kkhhhhhhhhhGGppGGGGGhhk..',
+      't.....khhGGGGGGGGGGGGGGGGGGGgk..',
+      't....khGGGGGGGGGGGGGGGGGGGeGgkk.',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGhhk',
+      '.t..khGGGGGGGGGGGGGGGGGGGGGGGGgn',
+      '..t.kttGGGGGGGGGGGGGGGGGGGGGggkk',
+      '...tthGGGGGGGGGGGGGGGGGGggggkk..',
+      '.....khGGGGGGGGGGGGGGGGgkkkk....',
+      '......khgGGGGGGGGGGGGggk........',
+      '.......kkhGggGGgggGGgkhhk.......',
+      '........khgkkhgkkkhgkkhgk.......',
+      '........khgkkhgk.khgk.kk........',
+      '.........kk..kk...kk............',
+    ] },
     // tier icons (16x16, outlined)
     icoSkibidi: { p: {'k': '#1c0a30', 'W': '#c58bff', 'w': '#a868f0', 'h': '#ead6ff', 'S': '#7a3fd0', 'd': '#4a2280', 'D': '#2e1258', 'H': '#241812', 'F': '#e6b088', 'f': '#b47a52', 'E': '#ffffff', 'e': '#4a8ad0', 'p': '#0a1a2a', 'm': '#2a0a0a', 'y': '#efe08a'}, r: [
       '......kWWWWWWWWWWWWWWWWWWk......',
@@ -239,30 +861,58 @@
       '.ssssssssssssssssssssss.',
       '...sssss..ssssssss.sss..',
     ] },
-    sock: { p: { w: '#eef2f6', r: '#e6554e', g: '#b7c0c9' }, r: [
-      'wwwww...',
-      'rrrrr...',
-      'wwwww...',
-      'rrrrr...',
-      'wwwww...',
-      'wwwwwww.',
-      'wwwwwwww',
-      '.gggggg.',
+    sock: { p: {'k': '#3a3a44', 'W': '#f0f0f4', 'h': '#ffffff', 'g': '#c0c4cc', 'R': '#ff5a5a', 'G': '#c8ccd6'}, r: [
+      '.kkkkkkkkk.......',
+      'kGGGGGGGGGk......',
+      'kGGGGGGGGGk......',
+      'khWWWWWWWgk......',
+      'kRRRRRRRRRk......',
+      'kRRRRRRRRRk......',
+      'khWWWWWWWgk......',
+      'khWWWWWWWgk......',
+      'khWWWWWWWgk......',
+      'kRRRRRRRRRk......',
+      'kRRRRRRRRRk......',
+      'khWWWWWWWgk......',
+      'khWWWWWWWgk......',
+      'khWWWWWWWgkkk....',
+      'khWWWWWWWWhhhkkk.',
+      'khWWWWWWWWWWWhhhk',
+      'khWWWWWWWWWWWWWgk',
+      '.khWWWWWWWWWWWWgk',
+      '..khWWWWWWWWWWWgk',
+      '...khWWWWWWWWWWgk',
+      '....khggggggggggk',
+      '.....kkkkkkkkkkk.',
     ] },
-    airpod: { p: { w: '#f5f7fa', g: '#c4cbd3', k: '#5a6470' }, r: [
-      '.www.',
-      'wwwkw',
-      'wwwww',
-      '.wwg.',
-      '..wg.',
-      '..wg.',
-      '..wg.',
-      '..gg.',
+    airpod: { p: {'k': '#5d6670', 'W': '#f4f6f8', 'h': '#ffffff', 'g': '#c0c8d0', 'm': '#3a3a44'}, r: [
+      '..kkkkkk..',
+      '.khhhhhhk.',
+      'khWmmWWWhk',
+      'khWmmWWWgk',
+      'khWWWWWWgk',
+      'khWWWWWWgk',
+      '.khgWWWgk.',
+      '..kkhWgk..',
+      '...khWgk..',
+      '...khWgk..',
+      '...khWgk..',
+      '...khWgk..',
+      '...khWgk..',
+      '...khWgk..',
+      '...khggk..',
+      '....kkk...',
     ] },
-    toothbrush: { p: { b: '#3fb3ff', w: '#ffffff', B: '#1f7fcc' }, r: [
-      '..........wwww',
-      'bbbbbbbbbbbBBB',
-      '.BBBBBBBBBB...',
+    toothbrush: { p: {'k': '#2a1a4a', 'H': '#8a6aff', 'h': '#c8b8ff', 'D': '#5a3ad0', 'b': '#ffffff'}, r: [
+      '...................k.k.k.k..',
+      '..................kbkbkbkbk.',
+      '....kkkkkkkkkkkkkkkbkbkbkbk.',
+      '...khhhhhhhhhhhhhhhbkbkbkbk.',
+      '.kkhHHHHHHHHHHHHHHHHhHhHhHhk',
+      'khhHHHHHHHHHHHHHHHHHHHHHHHDk',
+      '.kkhHDDDDDDDDDDDDDDDDDDDDDDk',
+      '...khkkkkkkkkkkkkkkkkkkkkkk.',
+      '....k.......................',
     ] },
     soap: { p: { p: '#ff9fc4', P: '#ffd0e3', d: '#d96b98' }, r: [
       '.pppppppp.',
@@ -878,55 +1528,51 @@
     if (O.view === 'title' || O.view === 'intro') drawDuckInBowl(ctx, bs, bx, ty, k);
   }
 
-  // The duck sits in the bowl on the title screen; starting a game flushes it:
-  // it sloshes side to side, then circles the bowl, spinning and shrinking until it's sucked down.
-  const FLUSH_SWIRL = 2100, FLUSH_DROP = 750;
+  // The duck sits in the bowl on the title screen. Starting a game flushes it, gently:
+  // the water starts to swirl and the duck rocks, then it goes "whoops" (a little hop and one backflip),
+  // then it drifts to the middle and gets pulled down out of sight behind the bowl.
+  const FLUSH_SWIRL = 2300, FLUSH_DROP = 750;
   function flushP() { return O.flushT0 ? (performance.now() - O.flushT0) / FLUSH_SWIRL : -1; }
+  const easeIO = x => x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
   function drawDuckInBowl(ctx, bs, bx, ty, k) {
     const p = O.view === 'intro' ? (O.reduced ? 1 : flushP()) : -1;
     const cx = bx + Math.round(bs.w * k / 2), rimY = ty + 6 * k, bowlR = 6.5 * k;
-    const ds = sprite('duck' + (p >= 0 ? Math.floor(O.t * 12) % 2 : 0));
-    const ds0 = k * 0.42; // duck size relative to the toilet
-    if (p >= 0 && p < 1.1) {
-      // churning water: a spiral of foam that tightens as the flush goes down
-      const n = 26, sw = Math.min(1, Math.max(0, (p - 0.15) / 0.85));
+    const ds = sprite('duck0');
+    const ds0 = k * 0.42;
+    if (p >= 0 && p < 1.05) { // calm swirl of foam that slowly tightens
+      const sw = clamp(p / 0.9, 0, 1), n = 16;
       for (let i = 0; i < n; i++) {
-        const a = O.t * (6 + sw * 22) + i * (Math.PI * 2 / n);
-        const r = bowlR * (1 - sw * 0.6) * (0.55 + 0.45 * ((i * 7) % 5) / 4);
-        ctx.fillStyle = i % 3 ? '#9fd6e0' : '#ffffff';
-        ctx.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(rimY + 2 + Math.sin(a) * r * 0.25), 2, 2);
-      }
-      // splashes jumping out of the bowl
-      if (p < 0.8) for (let i = 0; i < 4; i++) {
-        const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4, d = 6 + Math.random() * bowlR * 1.4;
-        ctx.fillStyle = Math.random() < 0.5 ? '#ffffff' : '#9fd6e0';
-        ctx.fillRect(Math.round(cx + Math.cos(a) * d), Math.round(rimY - 2 + Math.sin(a) * d * 0.9), 2, 2);
+        const a = O.t * (2.5 + sw * 5) + i * (Math.PI * 2 / n);
+        const r = bowlR * (0.85 - sw * 0.45) * (0.7 + 0.3 * ((i * 7) % 5) / 4);
+        ctx.fillStyle = i % 4 ? 'rgba(159,214,224,0.9)' : '#ffffff';
+        ctx.fillRect(Math.round(cx + Math.cos(a) * r), Math.round(rimY + 2 + Math.sin(a) * r * 0.22), 2, 1);
       }
     }
     if (p >= 1) { ctx.drawImage(bs.c, 0, 7, bs.w, bs.h - 7, bx, ty + 7 * k, bs.w * k, (bs.h - 7) * k); return; }
     let dx = 0, dy = 0, rot = 0, s = ds0;
     if (p < 0) { dy = Math.sin(O.t * 1.8) * 1.5; rot = Math.sin(O.t * 1.3) * 0.08; }
-    else if (p < 0.35) { // slosh side to side, harder and harder
-      const q = p / 0.35; dx = Math.sin(O.t * 16) * bowlR * 0.45 * q; dy = -Math.abs(Math.cos(O.t * 16)) * k * 1.2 * q; rot = Math.sin(O.t * 16) * 0.5 * q;
-    } else { // circle the bowl, spinning and shrinking, then gone
-      const q = (p - 0.35) / 0.65, a = O.t * (8 + q * 18);
-      dx = Math.cos(a) * bowlR * 0.5 * (1 - q); dy = Math.sin(a) * bowlR * 0.14 * (1 - q) + q * k * 2;
-      rot = q * q * 22; s = ds0 * (1 - Math.pow(q, 1.4) * 0.9);
+    else if (p < 0.3) { // rocking on the swirl
+      const q = p / 0.3; dx = Math.sin(O.t * 3) * bowlR * 0.18 * q; rot = Math.sin(O.t * 5) * 0.22 * q; dy = Math.sin(O.t * 4) * 0.8;
+    } else if (p < 0.58) { // whoops: a little hop and one clean backflip
+      const q = (p - 0.3) / 0.28; dy = -Math.sin(Math.PI * q) * k * 3.2; rot = -easeIO(q) * Math.PI * 2;
+    } else { // pulled to the middle and down out of sight
+      const q = (p - 0.58) / 0.42, e = easeIO(q);
+      rot = Math.sin(O.t * 6) * 0.15 * (1 - q); dy = e * ds.h * ds0 * 1.15; s = ds0 * (1 - e * 0.25);
     }
     const cy = rimY + 2 - ds.h * ds0 / 2 + dy;
     ctx.save(); ctx.translate(Math.round(cx + dx), Math.round(cy)); ctx.rotate(rot);
     ctx.drawImage(ds.c, Math.round(-ds.w * s / 2), Math.round(-ds.h * s / 2), Math.round(ds.w * s), Math.round(ds.h * s)); ctx.restore();
-    ctx.drawImage(bs.c, 0, 7, bs.w, bs.h - 7, bx, ty + 7 * k, bs.w * k, (bs.h - 7) * k); // bowl front hides the duck's bottom
+    ctx.drawImage(bs.c, 0, 7, bs.w, bs.h - 7, bx, ty + 7 * k, bs.w * k, (bs.h - 7) * k); // bowl front hides the duck as it goes down
   }
 
   function zoneCreatures(z, rnd) {
-    // returns a floating thing for zone z: bowl junk, pipe junk, sewer life, rat royalty, brainrot sludge
+    // what floats past in each zone: bathroom junk → lost stuff in the pipes → sewer critters → rat royalty → the rave
     const pick = arr => arr[Math.floor(rnd * arr.length) % arr.length];
-    if (z === 0) return pick(['bubbles', 'soap', 'tproll', 'toothbrush', 'bubbles', 'goldfish']);
-    if (z === 1) return pick(['airpod', 'goldfish', 'sock', 'tproll', 'toothbrush', 'bubbles', 'soap']);
-    if (z === 2) return pick(['rat', 'sludge', 'sock', 'airpod', 'rat', 'goldfish', 'tproll']);
-    if (z === 3) return pick(['ratking', 'rat', 'sludge', 'auraBlob', 'rat']);
-    return pick(['sludge', 'auraBlob', 'ratking', 'auraBlob', 'sludge']);
+    if (z === 0) return pick(['tpWad', 'tpWad', 'tpSheet', 'flossPick', 'qtip', 'gum', 'bandaid', 'soapBar', 'toothbrush', 'tpWad', 'duckling']);
+    if (z === 1) return pick(['tpWad', 'ring', 'lego', 'keys', 'phone', 'coin', 'sock', 'airpod', 'goldfish', 'flossPick', 'duckling', 'tpSheet']);
+    if (z === 2) return pick(['mouse', 'mouse', 'rat', 'roach', 'pizza', 'gatorEyes', 'sludge', 'tpWad', 'roach', 'coin']);
+    if (z === 3) return pick(['crownMouse', 'ratking', 'cheese', 'chain', 'mouse', 'crownMouse', 'coin', 'rat', 'cheese']);
+    return pick(['partyMouse', 'partyMouse', 'disco', 'boombox', 'glowstick', 'partyMouse', 'cheese', 'glowstick', 'auraBlob']);
   }
 
   function glow(ctx, x, y, r, col, a) {
@@ -955,11 +1601,11 @@
         const tint = rgb(mix(wc, [4, 10, 22], 0.35));
         const dir = hash(s + 3) > 0.5 ? 1 : -1; const sp = (2 + hash(s + 4) * 4) * dir;
         const big = hash(s + 9) > 0.9 && dz(realM) > 600;
-        const shallow = dz(realM) < 450;
-        const name = big ? 'fatberg' : shallow ? (hash(s + 7) > 0.5 ? 'sock' : 'tproll') : 'rat';
-        const w = big ? 24 : 16; const span = O.W + w * 2;
+        const dd = dz(realM); if (dd < SEWER_TOP + 100) continue; // nothing murky floating in the bowl or the pipe
+        const name = big ? 'fatberg' : dd < 1000 ? 'tpWad' : (hash(s + 7) > 0.5 ? 'mouse0' : 'rat0');
+        const w = big ? 24 : 32; const span = O.W + w * 2;
         let x = ((hash(s + 2) * span + O.t * sp) % span + span) % span - w;
-        drawSprite(ctx, name, x, y, dir < 0, tint);
+        ctx.globalAlpha = 0.35; drawSprite(ctx, name, x, y, dir < 0, tint); ctx.globalAlpha = 1;
       }
     }
   }
@@ -978,51 +1624,46 @@
         let y = (m - O.topM) * ppm;
         if (y < -30 || y > O.H + 30) continue;
         const dir = hash(s + 2) > 0.5 ? 1 : -1;
-        const sp = ['bubbles', 'tproll', 'soap', 'sock', 'airpod', 'toothbrush', 'sludge', 'auraBlob'].includes(type) ? 1.4 + hash(s + 3) * 2 : 4 + hash(s + 3) * 7;
+        const swims = ['mouse', 'rat', 'roach', 'goldfish', 'crownMouse', 'partyMouse'].includes(type);
+        const sp = swims ? 4 + hash(s + 3) * 7 : 1.2 + hash(s + 3) * 2.2;
         const span = O.W + 40;
         const x = ((hash(s + 4) * span + O.t * sp * dir) % span + span) % span - 20;
         const ph = hash(s + 5) * 6.28;
-        const sil = rgb(mix(waterColor(Math.max(0, dz(c * CH))), [3, 8, 18], 0.55));
-        if (type === 'goldfish') {
-          drawSprite(ctx, 'fish', x, y + Math.round(Math.sin(O.t * 2 + ph)), dir < 0, '~#ff8a3d');
-        } else if (type === 'sludge' || type === 'auraBlob' || type === 'ratking') {
-          const bob = Math.round(Math.sin(O.t * 1.6 + ph) * 2);
-          const g = type === 'sludge' ? [125, 255, 106] : type === 'auraBlob' ? [197, 139, 255] : [255, 213, 74];
-          glow(ctx, x + 6, y + 5 + bob, 9, g, 0.18 + 0.06 * Math.sin(O.t * 2 + ph));
-          drawSprite(ctx, type, x, y + bob, dir < 0);
-        } else if (type === 'school') {
-          for (let f = 0; f < 6; f++) {
-            const fx = x + (f % 3) * 15 + Math.sin(O.t * 2 + f) * 1.5, fy = y + Math.floor(f / 3) * 9 + (f % 2) * 4;
-            drawSprite(ctx, 'fish2', fx, fy, dir < 0);
-          }
-        } else if (type === 'fish' || type === 'hatchet' || type === 'turtle') {
-          drawSprite(ctx, 'minifish', x, y + Math.round(Math.sin(O.t * 2 + ph)), dir < 0, sil);
-        } else if (type === 'lantern') {
-          // little bioluminescent fish: dot pattern + glow
-          const tw = 0.5 + 0.5 * Math.sin(O.t * 3 + ph);
-          glow(ctx, x + 3, y + 1, 4, [127, 243, 255], 0.18 * tw);
-          ctx.fillStyle = '#1b2a3a'; ctx.fillRect(Math.round(x), Math.round(y), 6, 3);
-          ctx.fillStyle = `rgba(127,243,255,${0.5 + 0.5 * tw})`; ctx.fillRect(Math.round(x + 1), Math.round(y + 1), 1, 1); ctx.fillRect(Math.round(x + 3), Math.round(y + 2), 1, 1);
-        } else if (type === 'jelly' || type === 'jelly2' || type === 'vamp' || type === 'squidIcon' || type === 'bubbles') {
-          const bob = Math.sin(O.t * 1.5 + ph) * 3; y += bob;
-          const g = type === 'jelly' ? [255, 143, 209] : type === 'squidIcon' ? [236, 75, 75] : [127, 243, 255];
-          if (z >= 2) glow(ctx, x + 4, y + 3, 7, g, 0.14 + 0.06 * Math.sin(O.t * 2 + ph));
-          drawSprite(ctx, type, x, y, false);
-        } else if (type === 'angler') {
-          drawSprite(ctx, 'angler', x, y, dir > 0);
-          const lx = dir > 0 ? x + 19 : x + 2; const flick = 0.6 + 0.4 * Math.sin(O.t * 4 + ph);
-          glow(ctx, lx, y + 5, 6, [255, 255, 255], 0.3 * flick);
-        } else if (type === 'eel') {
-          const wig = Math.round(Math.sin(O.t * 3 + ph) * 1);
-          drawSprite(ctx, 'eel', x, y + wig, dir < 0);
-          glow(ctx, dir < 0 ? x : x + 13, y + 3 + wig, 3, [255, 106, 213], 0.25);
-        } else {
-          const bob = Math.round(Math.sin(O.t * 2 + ph) * 1);
-          drawSprite(ctx, type, x, y + bob, dir < 0);
+        const bob = Math.round(Math.sin(O.t * (swims ? 3 : 1.4) + ph) * (swims ? 1 : 2));
+        const yy = y + bob;
+        if (!O.endless && dz(m) > 7020) continue; // nothing floats inside the rave floor
+        const dd = dz(m), wl = dd < SEWER_TOP ? pipeW(dd) : sewerW(dd, 0), wr = dd < SEWER_TOP ? pipeW(dd) : sewerW(dd, 1);
+        ctx.save(); ctx.beginPath(); ctx.rect(Math.round(wl), yy - 40, Math.round(O.W - wl - wr), 80); ctx.clip();
+        drawOne(ctx, type, x, y, yy, dir, ph, s, z, swims);
+        ctx.restore();
+      }
+    }
+  }
+  function drawOne(ctx, type, x, y, yy, dir, ph, s, z, swims) {
+    {
+      {
+        if (type === 'goldfish') { drawSprite(ctx, 'fish', x, yy, dir < 0, '~#ff8a3d'); return; }
+        if (type === 'mouse' || type === 'rat') { drawSprite(ctx, type + (Math.floor(O.t * 6 + ph) % 2), x, yy, dir < 0); return; }
+        if (type === 'partyMouse') {
+          const v = ['partyMouse', 'partyMouseB', 'partyMouseC'][Math.floor(hash(s + 8) * 3)];
+          drawSprite(ctx, v, x, y - Math.round(beatPulse() * 3), dir < 0); return;
+        }
+        if (type === 'tpWad' && z >= 2) { drawSprite(ctx, 'tpWad', x, yy, false, '~#c8c09a'); return; } // soggy sewer wad
+        const G = { phone: [80, 200, 255, 0.22], glowstick: [125, 255, 106, 0.35], disco: [255, 255, 255, 0.2], sludge: [125, 255, 106, 0.2],
+                    auraBlob: [197, 139, 255, 0.2], ratking: [255, 213, 74, 0.2], cheese: [255, 213, 74, 0.12], gatorEyes: [240, 255, 74, 0.18] }[type];
+        if (type === 'gatorEyes' && (Math.floor(O.t * 1.3 + ph) % 5 === 0)) return; // blink
+        if (G) glow(ctx, x + 6, yy + 4, 9, G.slice(0, 3), G[3] + 0.06 * Math.sin(O.t * 2 + ph));
+        drawSprite(ctx, type, x, yy, swims ? dir < 0 : hash(s + 6) > 0.5);
+        if ((type === 'ring' || type === 'coin' || type === 'disco') && Math.sin(O.t * 4 + ph) > 0.85) { // sparkle
+          ctx.fillStyle = '#ffffff'; const sx = Math.round(x + 2 + hash(s + 9) * 5), sy = Math.round(yy + 1);
+          ctx.fillRect(sx, sy - 1, 1, 3); ctx.fillRect(sx - 1, sy, 3, 1);
         }
       }
     }
   }
+
+  // the beat of the Brainrot Core (~126 bpm): 1 on the kick, decaying to 0
+  const beatPulse = () => Math.pow(1 - ((O.t * 2.1) % 1), 3);
 
   function drawSnow(ctx) {
     // marine snow / particles drifting; slightly faster parallax than camera
@@ -1033,8 +1674,12 @@
       const sp = 3 + hash(i * 5) * 5;
       const y = ((hash(i * 7) * O.H - camPx + O.t * sp) % O.H + O.H) % O.H;
       const m = O.topM + y / O.ppm; if (m < 4) continue;
-      const deep = dz(m) > 1000;
-      ctx.fillStyle = deep ? (i % 9 === 0 ? (dz(m) > 4000 ? 'rgba(255,110,200,0.6)' : 'rgba(125,255,106,0.55)') : 'rgba(170,210,170,0.28)') : 'rgba(230,250,255,0.35)';
+      const d = dz(m), deep = d > 1000;
+      if (d > 6000 && i % 2 === 0) { // confetti
+        ctx.fillStyle = ['#ff3fb4', '#7dff6a', '#4ad0ff', '#ffe14a', '#c58bff'][i % 5];
+        ctx.fillRect(Math.round(x), Math.round(y), (i + Math.floor(O.t * 3)) % 2 ? 2 : 1, (i + Math.floor(O.t * 3)) % 2 ? 1 : 2); continue;
+      }
+      ctx.fillStyle = deep ? (i % 9 === 0 ? (d > 4000 ? 'rgba(255,110,200,0.6)' : 'rgba(125,255,106,0.55)') : 'rgba(170,210,170,0.28)') : 'rgba(230,250,255,0.35)';
       ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
     }
   }
@@ -1060,59 +1705,144 @@
     });
     ctx.globalAlpha = 1;
   }
+  // One continuous shaft from the bowl down: open bowl water, then the metal drain pipe (its walls grow in
+  // as the bowl narrows into the pipe), a heavy collar where the pipe meets the sewer, then brick tunnel
+  // walls that keep closing in the deeper you go. Nothing fades in; it's all terrain.
+  const PIPE_TOP = 110, SEWER_TOP = 1000;
+  const smooth = (a, b, x) => { const q = clamp((x - a) / (b - a), 0, 1); return q * q * (3 - 2 * q); };
+  function pipeW(d) { return O.W * (0.06 + 0.13 * smooth(PIPE_TOP, 330, d) + 0.03 * smooth(330, SEWER_TOP, d)) * smooth(PIPE_TOP - 40, PIPE_TOP + 60, d); }
+  function sewerW(d, side) {
+    const n = Math.sin(d * (side ? 0.027 : 0.031) + side * 2) * 6 + Math.sin(d * (side ? 0.09 : 0.11)) * 3;
+    const w = O.W * (0.2 + 0.1 * clamp((d - SEWER_TOP) / 5000, 0, 1)) + n * smooth(SEWER_TOP, SEWER_TOP + 200, d);
+    return O.endless ? w : w * (1 - 0.9 * smooth(6780, 7060, d)); // the tunnel opens into the rave cavern at the bottom
+  }
   function drawTrench(ctx) {
-    const ppm = O.ppm; const startM = 1000 + OFF;
-    const yStart = (startM - O.topM) * ppm; if (yStart > O.H) return;
+    const ppm = O.ppm;
+    const yStart = (PIPE_TOP - 40 + OFF - O.topM) * ppm; if (yStart > O.H) return;
     const floorM = 7120 + OFF; const yFloor = (floorM - O.topM) * ppm;
+    const W = O.W;
     for (let y = Math.max(0, Math.floor(yStart)); y < O.H; y += 2) {
-      const m = O.topM + y / ppm;
-      const t = clamp((m - startM) / 300, 0, 1) * (0.25 + 0.75 * clamp((m - startM) / 4800, 0, 1));
-      const nL = Math.sin(m * 0.031) * 6 + Math.sin(m * 0.11) * 3 + hash(Math.floor(m / 6)) * 4;
-      const nR = Math.sin(m * 0.027 + 2) * 6 + Math.sin(m * 0.09) * 3 + hash(Math.floor(m / 6) + 999) * 4;
-      const wl = Math.max(0, t * O.W * 0.27 + nL), wr = Math.max(0, t * O.W * 0.27 + nR);
-      const zc = wallColors(dz(m));
-      ctx.fillStyle = zc[3]; ctx.fillRect(0, y, Math.round(wl), 2); ctx.fillRect(Math.round(O.W - wr), y, Math.round(wr) + 1, 2);
-      ctx.fillStyle = zc[0]; if (wl > 2) ctx.fillRect(Math.round(wl) - 2, y, 2, 2); if (wr > 2) ctx.fillRect(Math.round(O.W - wr), y, 2, 2);
-      if (hash(Math.floor(m) + 77) > 0.985 && wr > 10) { const gx = O.W - wr * (0.3 + hash(Math.floor(m)) * 0.5); glow(ctx, gx, y, 4, [125, 255, 106], 0.3 + 0.2 * Math.sin(O.t * 2 + m)); ctx.fillStyle = '#c8ffbf'; ctx.fillRect(Math.round(gx), y, 1, 1); }
-      if (hash(Math.floor(m) + 41) > 0.985 && wl > 10) { const gx = wl * (0.3 + hash(Math.floor(m) + 3) * 0.5); glow(ctx, gx, y, 4, [255, 143, 209], 0.3 + 0.2 * Math.sin(O.t * 2.3 + m)); ctx.fillStyle = '#ffc4ea'; ctx.fillRect(Math.round(gx), y, 1, 1); }
+      const m = O.topM + y / ppm, d = dz(m);
+      if (d < SEWER_TOP) { // the pipe: round metal walls, lit near the inside edge, dark lip where they meet the water
+        const w = Math.round(pipeW(d)); if (w < 1) continue;
+        for (const side of [0, 1]) {
+          const X = x => side ? W - x - 1 : x, R = (x0, ww, col) => { ctx.fillStyle = col; ctx.fillRect(side ? W - x0 - ww : x0, y, ww, 2); };
+          R(0, w, '#3a434c'); R(Math.round(w * 0.45), Math.round(w * 0.35), '#4f5a65'); R(Math.round(w * 0.62), Math.max(1, Math.round(w * 0.14)), '#66737f');
+          R(w - 2, 1, '#9aa6b1'); R(w - 1, 1, '#c3ccd4'); R(w, 1, '#1a1f24');
+          if (hash(Math.floor(d / 2) + side * 77) > 0.93) R(Math.round(w * (0.2 + hash(Math.floor(d) + side) * 0.5)), 1, '#7a5a3a'); // rust streak
+        }
+        continue;
+      }
+      const zc = wallColors(d);
+      for (const side of [0, 1]) {
+        const wl = Math.max(0, sewerW(d, side));
+        ctx.fillStyle = zc[3]; ctx.fillRect(side ? Math.round(W - wl) : 0, y, Math.round(wl) + side, 2);
+        ctx.fillStyle = zc[0]; if (wl > 2) ctx.fillRect(side ? Math.round(W - wl) : Math.round(wl) - 2, y, 2, 2);
+      }
+      if (hash(Math.floor(m) + 77) > 0.985) { const wr = sewerW(d, 1), gx = W - wr * (0.3 + hash(Math.floor(m)) * 0.5); glow(ctx, gx, y, 4, [125, 255, 106], 0.3 + 0.2 * Math.sin(O.t * 2 + m)); ctx.fillStyle = '#c8ffbf'; ctx.fillRect(Math.round(gx), y, 1, 1); }
+      if (hash(Math.floor(m) + 41) > 0.985) { const wl = sewerW(d, 0), gx = wl * (0.3 + hash(Math.floor(m) + 3) * 0.5); glow(ctx, gx, y, 4, [255, 143, 209], 0.3 + 0.2 * Math.sin(O.t * 2.3 + m)); ctx.fillStyle = '#ffc4ea'; ctx.fillRect(Math.round(gx), y, 1, 1); }
     }
-    // sewer bricks: staggered rows, lit top edge, slime and gold specks
+    // pipe flanges: bolted rings every 90 m
+    for (let fd = Math.ceil((dz(O.topM) - 10) / 90) * 90; fd < SEWER_TOP; fd += 90) {
+      if (fd < PIPE_TOP + 60) continue;
+      const y = Math.round((fd + OFF - O.topM) * ppm); if (y > O.H + 6) break; if (y < -6) continue;
+      const w = Math.round(pipeW(fd)) + 3;
+      for (const side of [0, 1]) {
+        const x0 = side ? W - w : 0;
+        ctx.fillStyle = '#5d6872'; ctx.fillRect(x0, y, w, 5); ctx.fillStyle = '#9aa6b1'; ctx.fillRect(x0, y, w, 1); ctx.fillStyle = '#2a3036'; ctx.fillRect(x0, y + 4, w, 1);
+        ctx.fillStyle = '#c3ccd4'; for (let bx = 4; bx < w - 2; bx += 9) ctx.fillRect(side ? W - bx - 1 : bx, y + 2, 1, 1);
+      }
+    }
+    // the collar where the pipe drops into the sewer
+    const yc = Math.round((SEWER_TOP + OFF - O.topM) * ppm);
+    if (yc > -14 && yc < O.H + 14) for (const side of [0, 1]) {
+      const w = Math.round(Math.max(pipeW(SEWER_TOP - 1), sewerW(SEWER_TOP, side))) + 6, x0 = side ? W - w : 0;
+      ctx.fillStyle = '#2a3036'; ctx.fillRect(x0, yc - 6, w, 12); ctx.fillStyle = '#6e7b86'; ctx.fillRect(x0, yc - 6, w, 2);
+      ctx.fillStyle = '#4c5660'; ctx.fillRect(x0, yc - 4, w, 7); ctx.fillStyle = '#c3ccd4'; for (let bx = 3; bx < w - 2; bx += 7) ctx.fillRect(side ? W - bx - 1 : bx, yc - 1, 1, 1);
+      ctx.fillStyle = 'rgba(125,255,106,0.5)'; ctx.fillRect(side ? x0 + 4 : w - 8, yc + 6, 2, 4); // slime drip off the collar
+    }
+    // sewer bricks: staggered rows, lit top edge, slime and gold drips
     const BH = 10, BW = 20;
     const r0 = Math.floor((O.topM * ppm) / BH) - 1, r1 = Math.ceil(((O.topM * ppm) + O.H) / BH) + 1;
     for (let r = r0; r <= r1; r++) {
-      const yb = Math.round(r * BH - O.topM * ppm); const m = O.topM + (yb + BH / 2) / ppm;
-      if (m < startM + 40) continue;
-      const t = clamp((m - startM) / 300, 0, 1) * (0.25 + 0.75 * clamp((m - startM) / 4800, 0, 1));
+      const yb = Math.round(r * BH - O.topM * ppm); const m = O.topM + (yb + BH / 2) / ppm, d = dz(m);
+      if (d < SEWER_TOP + 8) continue;
       for (const side of [0, 1]) {
-        const wall = t * O.W * 0.27 + Math.sin(m * (side ? 0.027 : 0.031) + side * 2) * 6;
+        const wall = sewerW(d, side);
         const off = (r % 2) * (BW / 2);
         for (let c = 0; c * BW - off < wall - 4; c++) {
           const s = r * 131 + c * 17 + side * 7919;
           const w = BW - 2, h = BH - 2;
           let x = c * BW - off;
-          if (side) x = O.W - x - w;
-          const y = yb;
-          const zc = wallColors(dz(m));
-          ctx.fillStyle = zc[0]; ctx.fillRect(x, y, w, h);
-          ctx.fillStyle = zc[1]; ctx.fillRect(x, y, w, 1); ctx.fillRect(x, y, 1, h);
-          ctx.fillStyle = zc[2]; ctx.fillRect(x + 1, y + h - 1, w - 1, 1); ctx.fillRect(x + w - 1, y + 1, 1, h - 1);
-          if (hash(s + 4) > 0.82) { ctx.fillStyle = zc[4]; ctx.fillRect(x + 2 + Math.floor(hash(s + 6) * (w - 5)), y + h - 1, 2, 2 + Math.floor(hash(s + 7) * 3)); } // drips
+          if (side) x = W - x - w;
+          const zc = wallColors(d);
+          ctx.fillStyle = zc[0]; ctx.fillRect(x, yb, w, h);
+          ctx.fillStyle = zc[1]; ctx.fillRect(x, yb, w, 1); ctx.fillRect(x, yb, 1, h);
+          ctx.fillStyle = zc[2]; ctx.fillRect(x + 1, yb + h - 1, w - 1, 1); ctx.fillRect(x + w - 1, yb + 1, 1, h - 1);
+          if (hash(s + 4) > 0.82) { ctx.fillStyle = zc[4]; ctx.fillRect(x + 2 + Math.floor(hash(s + 6) * (w - 5)), yb + h - 1, 2, 2 + Math.floor(hash(s + 7) * 3)); }
         }
       }
     }
-    // the Brainrot Core: a glowing neon pool with sludge creatures bubbling up
-    if (yFloor < O.H + 60 && !O.endless) {
-      ctx.fillStyle = '#12030f'; ctx.fillRect(0, Math.round(yFloor), O.W, O.H);
-      for (let x = 0; x < O.W; x += 2) { const w = Math.sin(x * 0.08 + O.t * 2) * 2; ctx.fillStyle = (x >> 3) % 2 ? '#ff3fb4' : '#7dff6a'; ctx.fillRect(x, Math.round(yFloor + w), 2, 2); }
-      for (let i = 0; i < 5; i++) {
-        const vx = Math.round(O.W * (0.15 + i * 0.18) + hash(i * 5) * 16);
-        glow(ctx, vx, yFloor - 4, 14, i % 2 ? [255, 63, 180] : [125, 255, 106], 0.16 + 0.06 * Math.sin(O.t * 2 + i));
-        drawSprite(ctx, i % 2 ? 'auraBlob' : 'sludge', vx - 6, yFloor - 10 + Math.round(Math.sin(O.t * 1.7 + i) * 2));
-        for (let b = 0; b < 4; b++) {
-          const by = yFloor - 12 - ((O.t * 12 + b * 9 + i * 7) % 40);
-          ctx.fillStyle = i % 2 ? 'rgba(255,120,210,0.35)' : 'rgba(150,255,140,0.35)'; ctx.fillRect(vx + Math.round(Math.sin(O.t * 3 + b) * 2), Math.round(by), 1, 1);
-        }
-      }
+    if (yFloor < O.H + 160 && !O.endless) drawParty(ctx, yFloor);
+  }
+
+  // 3x5 pixel font for the neon sign
+  const GLYPH = { A: '010101111101101', B: '110101110101110', E: '111100110100111', I: '111010010010111', N: '101111111111101', O: '111101101101111',
+                  R: '110101110101101', T: '111010010010010', V: '101101101101010', ' ': '000000000000000' };
+  function pixText(ctx, str, x, y, col) {
+    ctx.fillStyle = col;
+    [...str].forEach((ch, i) => { const g = GLYPH[ch] || GLYPH[' ']; for (let p = 0; p < 15; p++) if (g[p] === '1') ctx.fillRect(x + i * 4 + (p % 3), y + Math.floor(p / 3), 1, 1); });
+  }
+  // The very bottom of the Brainrot Core: a mouse rave. DJ mouse, speaker stacks, a disco ball, a dancing crowd.
+  function drawParty(ctx, yF) {
+    const W = O.W, cx = Math.round(W / 2), yb = Math.round(yF), kick = beatPulse(), beat = O.t * 2.1;
+    const NEON = ['#ff3fb4', '#7dff6a', '#4ad0ff', '#ffe14a', '#c58bff'];
+    const ballY = yb - 92;
+    // light beams from the disco ball
+    for (let i = 0; i < 7; i++) {
+      const a = O.t * 0.7 + i * (Math.PI * 2 / 7), len = 120, wdt = 0.09;
+      if (Math.sin(a) < -0.2) continue; // only beams pointing down-ish
+      ctx.fillStyle = rgb(hex(NEON[i % 5]), (0.07 + 0.05 * kick).toFixed(3));
+      ctx.beginPath(); ctx.moveTo(cx, ballY + 11);
+      ctx.lineTo(cx + Math.cos(a - wdt) * len, ballY + 11 + Math.sin(a - wdt) * len); ctx.lineTo(cx + Math.cos(a + wdt) * len, ballY + 11 + Math.sin(a + wdt) * len); ctx.fill();
+    }
+    // neon sign
+    const sign = W > 260 ? 'BRAINROT RAVE' : 'RAVE', sw = sign.length * 4 - 1;
+    const flick = Math.sin(O.t * 13) > -0.92;
+    glow(ctx, cx, yb - 118, 20, [255, 63, 180], flick ? 0.14 + 0.08 * kick : 0.04);
+    pixText(ctx, sign, cx - Math.round(sw / 2), yb - 120, flick ? '#ff8fd6' : '#5a1a40');
+    // disco ball on its string
+    ctx.fillStyle = '#5a5a6a'; ctx.fillRect(cx, yb - 140, 1, 48);
+    glow(ctx, cx, ballY + 11, 18, [255, 255, 255], 0.16 + 0.1 * kick);
+    drawSprite(ctx, 'disco', cx - 11, ballY, Math.floor(O.t * 4) % 2 === 1);
+    // floor + flashing dance tiles
+    ctx.fillStyle = '#12030f'; ctx.fillRect(0, yb, W, O.H);
+    for (let x = 0, i = 0; x < W; x += 8, i++) {
+      ctx.fillStyle = NEON[(i + Math.floor(beat)) % 5]; ctx.globalAlpha = 0.35 + 0.5 * (((i + Math.floor(beat)) % 3 === 0) ? kick : 0.2);
+      ctx.fillRect(x, yb, 7, 3); ctx.globalAlpha = 1;
+    }
+    // stage, decks and the DJ
+    ctx.fillStyle = '#2a0a2a'; ctx.fillRect(cx - 40, yb - 8, 80, 8); ctx.fillStyle = '#ff3fb4'; ctx.fillRect(cx - 40, yb - 8, 80, 1);
+    const djs = sprite('partyMouseB'); const djY = yb - 15 - djs.h + 7 - Math.round(kick * 2);
+    drawSprite(ctx, 'partyMouseB', cx - Math.round(djs.w / 2), djY, true);
+    ctx.fillStyle = '#111'; ctx.fillRect(cx - 9, djY + 6, 2, 4); ctx.fillRect(cx - 9, djY + 5, 9, 1); // headphones
+    ctx.fillStyle = '#1a1a26'; ctx.fillRect(cx - 18, yb - 16, 36, 8); ctx.fillStyle = '#3a3a4e'; ctx.fillRect(cx - 18, yb - 16, 36, 1);
+    for (const tx of [cx - 10, cx + 9]) { // spinning records
+      ctx.fillStyle = '#05050a'; disc(ctx, tx, yb - 12, 3);
+      const a = O.t * 9; ctx.fillStyle = '#ff3fb4'; ctx.fillRect(Math.round(tx + Math.cos(a) * 2), Math.round(yb - 12 + Math.sin(a) * 1), 1, 1);
+    }
+    // speaker stacks, cones thump on the kick
+    for (const sx of [cx - 62, cx + 48]) {
+      ctx.fillStyle = '#0c0c14'; ctx.fillRect(sx, yb - 30, 14, 30); ctx.fillStyle = '#2a2a3a'; ctx.fillRect(sx + 1, yb - 29, 12, 28);
+      for (const cy of [yb - 22, yb - 9]) { ctx.fillStyle = '#05050a'; disc(ctx, sx + 7, cy, 4 + Math.round(kick)); ctx.fillStyle = '#4a4a5e'; disc(ctx, sx + 7, cy, 1); }
+    }
+    // the crowd
+    for (let x = 2, i = 0; x < W - 28; x += 30, i++) {
+      if (Math.abs(x + 16 - cx) < 84) continue;
+      const jump = Math.round(((i % 2) ? kick : Math.pow(1 - ((beat + 0.5) % 1), 3)) * 4);
+      const v = ['partyMouse', 'partyMouseB', 'partyMouseC'][i % 3];
+      drawSprite(ctx, v, x, yb - sprite(v).h - jump, x > cx);
+      if (i % 3 === 1) { const gx = x > cx ? x + 4 : x + 24; glow(ctx, gx + 3, yb - 26 - jump, 6, [125, 255, 106], 0.3); drawSprite(ctx, 'glowstick', gx, yb - 34 - jump); }
     }
   }
 
@@ -1200,8 +1930,7 @@
     O.tmix = O.reduced ? tm : O.tmix + (tm - O.tmix) * (1 - Math.exp(-dt * 2.2));
     const ctx = O.ctx; const ySurf = (0 - O.topM) * O.ppm;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, O.W, O.H);
-    const fp = O.view === 'intro' && !O.reduced ? flushP() : -1;
-    if (fp > 0.15 && fp < 1) { const a = Math.sin(fp * Math.PI) * 1.6; ctx.setTransform(1, 0, 0, 1, Math.round((Math.random() - 0.5) * 2 * a), Math.round((Math.random() - 0.5) * 2 * a)); }
+
     drawSky(ctx, 0, ySurf);
     // dusk over the sky on the results screen
     O.dusk = (O.dusk || 0) + ((O.view === 'results' ? 1 : 0) - (O.dusk || 0)) * (O.reduced ? 1 : 1 - Math.exp(-dt * 2));
@@ -1209,7 +1938,6 @@
     drawWater(ctx, ySurf);
     drawRays(ctx, ySurf);
     drawFar(ctx);
-    drawKelp(ctx);
     drawTrench(ctx);
     if (O.tmix < 0.98) { ctx.globalAlpha = 1 - O.tmix; drawCreatures(ctx); ctx.globalAlpha = 1; }
     drawLurker(ctx, ySurf);

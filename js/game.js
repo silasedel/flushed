@@ -176,7 +176,7 @@
     beginQuestion(0, true);
   }
 
-  const INTRO_MS = 3000;
+  const INTRO_MS = 3200;
   function beginQuestion(i, fresh) {
     G.idx = i; G.input = ''; G.tries = []; markSeen(G.ids[i]);
     if (fresh) { // first prompt: the duck gets flushed down the toilet before the clock starts
@@ -938,15 +938,14 @@
     Ocean.init($('#ocean'));
     applySettings(); wire(); buildGauge();
     if (!QS.length) { document.body.insertAdjacentHTML('beforeend', '<p style="position:fixed;bottom:8px;left:8px;color:#f66">Question database failed to load.</p>'); }
-    // resume an in-progress dive (refresh never resets the timer: phase deadlines are absolute timestamps)
+    // Reloading mid-game ends that game and starts a fresh one (endless runs with answers are saved first).
     const A = store.active;
-    const fresh = A && (A.mode === 'daily' || (Date.now() - (A.phaseEnd || 0) < 60000 && Date.now() - (A.startedAt || 0) < 3600000) || A.pausedLeft);
-    if (A && fresh && A.ids && A.ids.every(id => BY_ID.has(id))) {
-      if (A.pausedLeft && A.phase === 'answering') { A.phaseEnd = Date.now() + A.pausedLeft; delete A.pausedLeft; }
-      G = store.active; Ocean.setView('game', true); showGame();
-    } else {
-      store.active = null; Ocean.setView('title', true); showTitle();
-    }
+    Ocean.setView('title', true); showTitle();
+    if (A && A.ids && A.ids.every(id => BY_ID.has(id))) {
+      G = A;
+      if (!lenOf(G) && G.results.filter(Boolean).length) abandon(true); else discardDive();
+      startGame(A.mode === 'pack' ? 'pack' : 'unlimited', A.mode === 'pack' ? A.key : undefined);
+    } else store.active = null;
     buildDepthLabels(); requestAnimationFrame(labelLoop);
     tickTimer = setInterval(tick, 100);
     setInterval(updateCountdown, 1000);
