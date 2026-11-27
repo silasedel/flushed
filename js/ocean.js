@@ -1635,7 +1635,7 @@
         const ph = hash(s + 5) * 6.28;
         const bob = Math.round(Math.sin(O.t * (swims ? 3 : 1.4) + ph) * (swims ? 1 : 2));
         const yy = y + bob;
-        const dd = dz(m), wl = dd < SEWER_TOP ? pipeW(dd) : sewerW(dd, 0), wr = dd < SEWER_TOP ? pipeW(dd) : sewerW(dd, 1);
+        const dd = dz(m), wl = dd < SEWER_TOP ? pipeW(dd) : wallAt(dd, 0) + 2, wr = dd < SEWER_TOP ? pipeW(dd) : wallAt(dd, 1) + 2;
         ctx.save(); ctx.beginPath(); ctx.rect(Math.round(wl), yy - 40, Math.round(O.W - wl - wr), 80); ctx.clip();
         drawOne(ctx, type, x, y, yy, dir, ph, s, z, swims);
         ctx.restore();
@@ -1714,57 +1714,58 @@
   const PIPE_TOP = 110, SEWER_TOP = 1000;
   const smooth = (a, b, x) => { const q = clamp((x - a) / (b - a), 0, 1); return q * q * (3 - 2 * q); };
   // vertical drain pipes along both edges: [x as a fraction of the width, thickness, where it comes out of the wall (m), where it ends (m)]
-  const PIPES = [[0.018, 10, 120, 1090], [0.07, 6, 170, 1050], [0.93, 7, 145, 1070], [0.978, 10, 120, 1110]];
+  const PIPES = [[0.018, 10, 120, 988], [0.07, 6, 170, 988], [0.93, 7, 145, 988], [0.978, 10, 120, 988]]; // all run down into the sewer archway
   function pipeW(d) { return d < PIPE_TOP ? 0 : O.W * 0.07 + 8; } // how much of each edge the pipes take (for clipping floaters)
   function sewerW(d, side) {
     const n = Math.sin(d * (side ? 0.027 : 0.031) + side * 2) * 6 + Math.sin(d * (side ? 0.09 : 0.11)) * 3;
     const w = O.W * (0.2 + 0.1 * clamp((d - SEWER_TOP) / 5000, 0, 1)) + n;
     return w;
   }
+  const BH = 10, BW = 20; // brick size in screen pixels
+  const rowDepth = r => (r * BH + BH / 2) / O.ppm - OFF;                          // depth at the middle of brick row r
+  const wallAt = (d, side) => Math.round(sewerW(rowDepth(Math.floor(((d + OFF) * O.ppm) / BH)), side)); // wall width, constant per brick row
   function drawTrench(ctx) {
     const ppm = O.ppm;
     const yStart = (PIPE_TOP - 40 + OFF - O.topM) * ppm; if (yStart > O.H) return; // eslint-disable-line
     const floorM = 7120 + OFF; const yFloor = (floorM - O.topM) * ppm;
     const W = O.W;
-    for (let y = Math.max(0, Math.floor(yStart)); y < O.H; y += 2) {
-      const m = O.topM + y / ppm, d = dz(m);
-      if (d < SEWER_TOP) continue; // above the sewer the edges are just the drain pipes (drawn below)
-      const zc = wallColors(d);
-      for (const side of [0, 1]) {
-        const wl = Math.max(0, sewerW(d, side));
-        ctx.fillStyle = zc[3]; ctx.fillRect(side ? Math.round(W - wl) : 0, y, Math.round(wl) + side, 2);
-        ctx.fillStyle = zc[0]; if (wl > 2) ctx.fillRect(side ? Math.round(W - wl) : Math.round(wl) - 2, y, 2, 2);
-      }
-      if (hash(Math.floor(m) + 77) > 0.985) { const wr = sewerW(d, 1), gx = W - wr * (0.3 + hash(Math.floor(m)) * 0.5); glow(ctx, gx, y, 4, [125, 255, 106], 0.3 + 0.2 * Math.sin(O.t * 2 + m)); ctx.fillStyle = '#c8ffbf'; ctx.fillRect(Math.round(gx), y, 1, 1); }
-      if (hash(Math.floor(m) + 41) > 0.985) { const wl = sewerW(d, 0), gx = wl * (0.3 + hash(Math.floor(m) + 3) * 0.5); glow(ctx, gx, y, 4, [255, 143, 209], 0.3 + 0.2 * Math.sin(O.t * 2.3 + m)); ctx.fillStyle = '#ffc4ea'; ctx.fillRect(Math.round(gx), y, 1, 1); }
-    }
     drawPipes(ctx);
-    // sewer bricks: staggered rows, lit top edge, slime and gold drips
-    const BH = 10, BW = 20;
+    // Sewer walls, built one brick row at a time so every edge is crisp and steady while scrolling:
+    // one wall width per row (a natural stair-step edge), mortar behind, bricks cut off exactly at the wall,
+    // and a soft shadow where the wall meets the tunnel.
     const r0 = Math.floor((O.topM * ppm) / BH) - 1, r1 = Math.ceil(((O.topM * ppm) + O.H) / BH) + 1;
     for (let r = r0; r <= r1; r++) {
-      const yb = Math.round(r * BH - O.topM * ppm); const m = O.topM + (yb + BH / 2) / ppm, d = dz(m);
+      const yb = Math.round(r * BH - O.topM * ppm), d = rowDepth(r);
       if (d < SEWER_TOP) continue;
+      const row = wallColors(d);
       for (const side of [0, 1]) {
-        const wall = sewerW(d, side);
+        const wall = wallAt(d, side); if (wall < 2) continue;
+        ctx.fillStyle = row[3]; ctx.fillRect(side ? W - wall : 0, yb, wall, BH);
         const off = (r % 2) * (BW / 2);
-        for (let c = 0; c * BW - off < wall - 4; c++) {
+        for (let c = 0; c * BW - off < wall; c++) {
           const s = r * 131 + c * 17 + side * 7919;
-          const w = BW - 2, h = BH - 2;
-          let x = c * BW - off;
-          if (side) x = W - x - w;
-          const zc = wallColors(d, (hash(s + 99) - 0.5) * 320); // per-brick jitter = soft, brick-by-brick blend
+          const bx0 = Math.max(0, c * BW - off), bx1 = Math.min(c * BW - off + BW - 2, wall - 1);
+          if (bx1 - bx0 < 3) continue;
+          const w = bx1 - bx0, h = BH - 2, x = side ? W - bx1 : bx0;
+          const zc = wallColors(d, (hash(s + 99) - 0.5) * 320); // per-brick jitter = soft, brick-by-brick blend between zones
           ctx.fillStyle = zc[0]; ctx.fillRect(x, yb, w, h);
-          ctx.fillStyle = zc[1]; ctx.fillRect(x, yb, w, 1); ctx.fillRect(x, yb, 1, h);
-          ctx.fillStyle = zc[2]; ctx.fillRect(x + 1, yb + h - 1, w - 1, 1); ctx.fillRect(x + w - 1, yb + 1, 1, h - 1);
-          if (hash(s + 4) > 0.82) { ctx.fillStyle = zc[4]; ctx.fillRect(x + 2 + Math.floor(hash(s + 6) * (w - 5)), yb + h - 1, 2, 2 + Math.floor(hash(s + 7) * 3)); }
+          ctx.fillStyle = zc[1]; ctx.fillRect(x, yb, w, 1); ctx.fillRect(side ? x + w - 1 : x, yb, 1, h);
+          ctx.fillStyle = zc[2]; ctx.fillRect(x, yb + h - 1, w, 1);
+          if (hash(s + 4) > 0.84 && w > 8) { ctx.fillStyle = zc[4]; ctx.fillRect(x + 2 + Math.floor(hash(s + 6) * (w - 5)), yb + h - 1, 2, 2 + Math.floor(hash(s + 7) * 3)); } // drips
+        }
+        ctx.fillStyle = 'rgba(0,0,0,0.32)'; ctx.fillRect(side ? W - wall - 2 : wall, yb, 2, BH); // shadow onto the tunnel
+        ctx.fillStyle = row[1]; ctx.fillRect(side ? W - wall : wall - 1, yb, 1, BH - 2);           // lit inner edge
+        if (hash(r * 7 + side * 13) > 0.94) { // a glowing speck stuck in the mortar
+          const gx = side ? W - wall * (0.3 + hash(r + 3) * 0.5) : wall * (0.3 + hash(r + 3) * 0.5);
+          const col = d < Z_RAT ? [125, 255, 106] : d < Z_CORE ? [255, 213, 74] : [255, 143, 209];
+          glow(ctx, gx, yb + BH - 1, 4, col, 0.3 + 0.2 * Math.sin(O.t * 2 + r)); ctx.fillStyle = rgb(col); ctx.fillRect(Math.round(gx), yb + BH - 1, 1, 1);
         }
       }
     }
     // the sewer starts at a brick archway: a thick lintel across each wall with a keystone, pipes pour out below it
     const ya = Math.round((SEWER_TOP + OFF - O.topM) * ppm);
     if (ya > -20 && ya < O.H + 20) for (const side of [0, 1]) {
-      const w = Math.round(sewerW(SEWER_TOP, side)) + 10, x0 = side ? W - w : 0, zc = wallColors(SEWER_TOP + 50);
+      const w = wallAt(SEWER_TOP + 20, side) + 10, x0 = side ? W - w : 0, zc = wallColors(SEWER_TOP + 50);
       ctx.fillStyle = zc[3]; ctx.fillRect(x0, ya - 12, w, 14);
       for (let bx = 0; bx < w; bx += 12) { ctx.fillStyle = zc[0]; ctx.fillRect(side ? W - bx - 11 : bx, ya - 11, 11, 5); ctx.fillRect(side ? W - bx - 5 - 11 : bx + 5, ya - 5, 11, 5); }
       ctx.fillStyle = zc[1]; ctx.fillRect(x0, ya - 12, w, 1);
@@ -1798,15 +1799,10 @@
         ctx.fillStyle = '#323a41'; ctx.fillRect(ex0, y0 - 2, ew, 2);
         ctx.fillStyle = '#5d6872'; ctx.fillRect(right ? x : x + w - 1, y0 - w - 1, 2, w + 2); // bend seam
       }
-      // bottom: an open mouth with a lip, pouring a little stream of sewer water
+      // bottom: a collar where the pipe goes into the archway's bricks
       if (y1 > -20 && y1 < O.H + 20) {
-        ctx.fillStyle = '#5d6872'; ctx.fillRect(x - 2, y1 - 3, w + 4, 4); ctx.fillStyle = '#88949f'; ctx.fillRect(x - 2, y1 - 3, w + 4, 1);
-        ctx.fillStyle = '#12171b'; ctx.fillRect(x + 1, y1, w - 2, 1);
-        for (let k = 0; k < 10; k++) {
-          const sy = y1 + 1 + ((O.t * 40 + k * 7 + i * 5) % 30);
-          ctx.fillStyle = k % 3 ? 'rgba(125,190,150,0.55)' : 'rgba(200,255,210,0.7)';
-          ctx.fillRect(x + Math.round(w / 2) - 1 + Math.round(Math.sin(k + O.t * 3) * 0.6), Math.round(sy), 2, 2);
-        }
+        ctx.fillStyle = '#5d6872'; ctx.fillRect(x - 2, y1 - 5, w + 4, 5); ctx.fillStyle = '#88949f'; ctx.fillRect(x - 2, y1 - 5, w + 4, 1);
+        ctx.fillStyle = '#2a3036'; ctx.fillRect(x - 1, y1 - 3, 1, 1); ctx.fillRect(x + w, y1 - 3, 1, 1);
       }
     });
   }
@@ -1822,8 +1818,8 @@
       const s = L * 7 + 13, deepness = clamp((L - Z_CORE) / 2600, 0, 1.4); // keeps climbing past 1 = more insane
       const chance = L < Z_RAT ? 0.16 : L < Z_CORE ? 0.3 : Math.min(0.95, 0.42 + 0.38 * deepness); // gets busier the deeper you go
       if (hash(s) > chance) continue;
-      const side = hash(s + 1) > 0.5 ? 1 : 0, y = Math.round((L + OFF - O.topM) * ppm);
-      const edge = sewerW(L, side), len = 30 + Math.floor(hash(s + 2) * 3) * 6, zc = wallColors(L);
+      const side = hash(s + 1) > 0.5 ? 1 : 0, y = Math.round(Math.round(((L + OFF) * ppm) / BH) * BH - O.topM * ppm); // sits on a brick course
+      const edge = wallAt(L, side), len = 30 + Math.floor(hash(s + 2) * 3) * 6, zc = wallColors(L);
       const x0 = side ? Math.round(W - edge - len) : Math.round(edge - 2);
       // the shelf: two rows of bricks sticking out of the wall
       ctx.fillStyle = zc[2]; ctx.fillRect(x0, y, len + 2, 7);
