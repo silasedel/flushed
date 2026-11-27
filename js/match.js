@@ -93,8 +93,8 @@
     for (const v of variants(n)) { const a = index.get(v); if (a) return { answer: a, exact: true, label: q._parsed.label.get(v) }; }
     // fuzzy: allow small typos on longer inputs; reject if ambiguous between different answers
     const flat = n.replace(/ /g, '');
-    if (flat.length < 5) return null;
-    const maxD = flat.length >= 10 ? 2 : 1;
+    if (flat.length < 7) return null; // short words: a 1-letter change is often a different real word (horse/house, photon/proton); the did-you-mean box handles those
+    const maxD = flat.length >= 11 ? 2 : 1;
     let best = null, bestD = maxD + 1, tie = false;
     for (const [k, ans] of keys) {
       if (k.includes(' ')) continue; // compare against the space-less variants only
