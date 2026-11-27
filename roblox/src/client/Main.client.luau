@@ -121,7 +121,7 @@ end
 ---------------------------------------------------------------- state
 local profile = nil
 local len = 7
-local lastMode = "free"
+local lastMode, lastPack = "free", nil
 local function itemById(id)
 	for _, s in Config.SHOP do if s.id == id then return s end end
 	for _, s in Config.ROBUX_PASSES do if s.id == id then return s end end
@@ -151,8 +151,9 @@ local fine = label({ Parent = T, Text = "", Size = UDim2.new(0.8, 0, 0.06, 0), P
 local row2 = make("Frame", { Parent = T, BackgroundTransparency = 1, Size = UDim2.new(0.7, 0, 0.065, 0), Position = UDim2.fromScale(0.5, 0.85), AnchorPoint = Vector2.new(0.5, 0) }, {
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10) }),
 })
-local shopBtn = button({ Parent = row2, Text = "SHOP", Size = UDim2.new(0.3, 0, 1, 0), Max = 20 })
-local statsBtn = button({ Parent = row2, Text = "STATS", Size = UDim2.new(0.3, 0, 1, 0), Max = 20 })
+local packsBtn = button({ Parent = row2, Text = "THEMED PACKS", Size = UDim2.new(0.38, 0, 1, 0), Max = 20 })
+local shopBtn = button({ Parent = row2, Text = "SHOP", Size = UDim2.new(0.27, 0, 1, 0), Max = 20 })
+local statsBtn = button({ Parent = row2, Text = "STATS", Size = UDim2.new(0.27, 0, 1, 0), Max = 20 })
 
 local function renderTitle()
 	for L, b in lenButtons do
@@ -218,7 +219,7 @@ local function showPrompt(pv)
 	game_.total = pv.total
 	game_.seconds = pv.seconds
 	game_.deadline = os.clock() + pv.seconds
-	topLeft.Text = (pv.ranked and "RANKED · " or "") .. (pv.total and string.format("PROMPT %d OF %d", pv.idx, pv.total) or string.format("PROMPT %d · ENDLESS", pv.idx))
+	topLeft.Text = (pv.ranked and "RANKED · " or pv.packName and (string.upper(pv.packName) .. " · ") or "") .. (pv.total and string.format("PROMPT %d OF %d", pv.idx, pv.total) or string.format("PROMPT %d · ENDLESS", pv.idx))
 	scoreLabel.Text = tostring(pv.score)
 	promptLabel.Text = pv.prompt
 	feedback.Text = ""
@@ -290,7 +291,7 @@ local function showResults(res)
 	game_ = nil
 	if res.profile then profile = res.profile end
 	local n = res.prompts
-	resTitle.Text = res.ranked and string.format("RANKED %d-PROMPT FLUSH", n) or string.format("%d-PROMPT FLUSH COMPLETE", n)
+	resTitle.Text = res.packName and (string.upper(res.packName) .. " PACK COMPLETE") or res.ranked and string.format("RANKED %d-PROMPT FLUSH", n) or string.format("%d-PROMPT FLUSH COMPLETE", n)
 	resScore.Text = tostring(res.score)
 	resPct.Text = string.format("Better than %d%% of players", res.percentile)
 	if res.cheated then
@@ -317,10 +318,10 @@ local function showResults(res)
 end
 
 ---------------------------------------------------------------- game actions
-local function startGame(mode)
-	local res = call("start", { mode = mode, len = len })
+local function startGame(mode, packKey)
+	local res = call("start", { mode = mode, len = len, pack = packKey })
 	if not res then return end
-	lastMode = mode
+	lastMode, lastPack = mode, packKey
 	game_ = { ranked = mode == "ranked" }
 	if profile then profile.coins = res.coins; coinCorner.Text = coinText(res.coins) end
 	if res.extraTime then toast("Extra Time boost: +5s every prompt") end
@@ -395,7 +396,7 @@ end)
 
 flushBtn.Activated:Connect(function() startGame("free") end)
 rankedBtn.Activated:Connect(function() startGame("ranked") end)
-againBtn.Activated:Connect(function() startGame(lastMode) end)
+againBtn.Activated:Connect(function() startGame(lastMode, lastPack) end)
 homeBtn.Activated:Connect(function() Scene.title(); show("title") end)
 
 ---------------------------------------------------------------- SHOP + STATS (modal)
@@ -462,6 +463,23 @@ openShop = function()
 	modal.Visible = true
 end
 
+local function openPacks()
+	if not profile then return end
+	clearBody()
+	modalTitle.Text = "THEMED PACKS"
+	make("UIListLayout", { Parent = modalBody, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
+	label({ Parent = modalBody, Text = string.format("One topic, easy to hard. %s prompts. Free to play, pays like a normal game.", len == 0 and "Endless" or tostring(len)), Size = UDim2.new(1, 0, 0, 28), Max = 16, TextColor3 = DIM, ZIndex = 23, LayoutOrder = 0, Font = Enum.Font.Gotham })
+	for i, pk in profile.packs do
+		local b = button({ Parent = modalBody, Text = "", Size = UDim2.new(1, -12, 0, 70), LayoutOrder = i, ZIndex = 22, Stroke = 2 })
+		local nm = label({ Parent = b, Text = string.format("%02d  %s", i, string.upper(pk.name)), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, Font = TITLE_FONT, Max = 24, ZIndex = 23, TextColor3 = GOLD })
+		label({ Parent = b, Text = pk.blurb, Size = UDim2.new(0.62, 0, 0.45, 0), Position = UDim2.fromScale(0, 0.52), TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 23, TextColor3 = DIM, Font = Enum.Font.Gotham })
+		label({ Parent = b, Text = pk.count .. " PROMPTS" .. (pk.best and ("  ·  BEST " .. pk.best) or ""), Size = UDim2.new(0.36, 0, 1, 0), Position = UDim2.fromScale(0.64, 0), TextXAlignment = Enum.TextXAlignment.Right, Max = 16, ZIndex = 23 })
+		b.Activated:Connect(function() modal.Visible = false; startGame("pack", pk.key) end)
+		local _ = nm
+	end
+	modal.Visible = true
+end
+
 local function openStats()
 	if not profile then return end
 	clearBody()
@@ -484,6 +502,7 @@ local function openStats()
 	modal.Visible = true
 end
 shopBtn.Activated:Connect(openShop)
+packsBtn.Activated:Connect(openPacks)
 statsBtn.Activated:Connect(openStats)
 
 ---------------------------------------------------------------- boot

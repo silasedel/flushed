@@ -33,15 +33,19 @@ local function pickPack(exclude)
 	return opts[#opts][1]
 end
 
+local FALLBACK = { easy = { "easy", "medium", "hard" }, medium = { "medium", "easy", "hard" }, hard = { "hard", "medium", "easy" } }
+
 -- profile.seen[id] = counter when served; profile.recentGroups = last 30 groups served
-function Picker.pick(profile, n, exclude)
+-- pack = a Config.PACKS key for a themed pack (all difficulties, ramped), or nil for a random game
+function Picker.pick(profile, n, exclude, pack)
 	exclude = exclude or {}
 	local seen = profile.seen or {}
 	local ex = {}
 	for _, id in exclude do ex[id] = true end
 	local pool = {}
-	for _, q in Bank.casual do if not ex[q.id] then table.insert(pool, q) end end
-	if #pool < n then pool = Bank.casual end
+	local source = pack and (Bank.byPack[pack] or {}) or Bank.casual
+	for _, q in source do if not ex[q.id] then table.insert(pool, q) end end
+	if #pool < n then pool = source end
 	local fresh, old = {}, {}
 	for _, q in pool do
 		if seen[q.id] == nil then table.insert(fresh, q) else table.insert(old, q) end
@@ -72,6 +76,7 @@ function Picker.pick(profile, n, exclude)
 			for _, p in picks do if p.group == x.group then return false end end
 		end
 		if strict >= 2 and recentG[x.group] then return false end
+		if pack then return true end -- packs: any prompt in the topic, no brainrot/vague/famous limits
 		if x.vague and (not allowVague or count(function(p) return p.vague end) > 0) then return false end
 		if x.famous and (not allowFamous or count(function(p) return p.famous end) > 0) then return false end
 		if x.brainrot and (not allowBrainrot or count(function(p) return p.brainrot end) > 0) then return false end
@@ -79,7 +84,19 @@ function Picker.pick(profile, n, exclude)
 	end
 	local function add(q) table.insert(picks, q); picked[q] = true end
 	for _, strict in { 2, 1, 0 } do
-		local tries = 0
+		if pack then -- difficulty ramp: 3 easy, 3 medium, 1 hard
+			for _, want in Config.PACK_MIX do
+				if #picks >= n then break end
+				for _, w in FALLBACK[want] do
+					local found = nil
+					for _, q in sh do
+						if q.diff == w and ok(q, strict) then found = q; break end
+					end
+					if found then add(found); break end
+				end
+			end
+		end
+		local tries = pack and 60 or 0
 		while #picks < n and tries < 60 do
 			tries += 1
 			local ent = count(function(p) return Config.ENTERTAINMENT[p.pack] == true end)
@@ -94,10 +111,15 @@ function Picker.pick(profile, n, exclude)
 		end
 		if #picks >= n then break end
 	end
-	if allowBrainrot and #picks > 0 and count(function(p) return p.brainrot end) == 0 then
+	if not pack and allowBrainrot and #picks > 0 and count(function(p) return p.brainrot end) == 0 then
 		for _, q in sh do
 			if q.brainrot and not picked[q] then picks[#picks] = q; break end
 		end
+	end
+	if pack then
+		local ids = {}
+		for _, q in picks do table.insert(ids, q.id) end
+		return ids
 	end
 	-- order so the same topic never comes twice in a row when possible
 	local byPack, packOrder = {}, {}

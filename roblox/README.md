@@ -8,17 +8,30 @@ This folder is the Roblox version of FLUSHED, written in Luau and synced into Ro
 
 The money rules for Roblox are in `../ROBLOX.md`, section 5.
 
-## Try it in 2 minutes
+## Put it on Roblox (no coding needed)
 
-1. Install **Roblox Studio** (free): https://create.roblox.com
-2. Build the place file. From this folder, run:
-   ```bash
-   rojo build -o Flushed.rbxl
-   ```
-   (Install Rojo once with `brew install rojo`.)
-3. Double-click `Flushed.rbxl` to open it in Studio, then press **Play** (F5).
+1. **Get Roblox Studio** (free) from https://create.roblox.com. Sign in with your Roblox account.
+2. **Open the game.** Double-click `Flushed.rbxl` (or in Studio: **File → Open from File**).
+3. **Play it.** Press the **Play** button (F5) at the top.
+   - FLUSH starts a free game.
+   - RANKED costs coins and pays by score.
+   - THEMED PACKS picks one topic.
+   - SHOP has skins and trails.
+   - Press **Stop** to go back to editing.
+4. **Turn on saving.** In Studio: **Home → Game Settings → Security**, switch on
+   **Enable Studio Access to API Services**, and press Save. (Studio asks you to publish first, which is step 5.)
+5. **Publish it.** **File → Publish to Roblox**, then pick "New Experience" and give it a name (FLUSHED).
+6. **Make it public.** Go to https://create.roblox.com/dashboard/creations and click the game.
+   - **Questionnaire:** fill in the Maturity & Compliance questionnaire.
+   - **Look:** add an icon and thumbnails.
+   - **Go live:** set it to **Public**.
 
-You'll see the title screen with FLUSH, RANKED, SHOP and STATS. Type answers and press Enter.
+   Now anyone can find and play it.
+
+To make the build file again after changes, run this in the `roblox` folder:
+```bash
+rojo build -o Flushed.rbxl
+```
 
 ## Working on it (live sync)
 
@@ -110,6 +123,5 @@ node tools/roblox-sim.js
   timeouts, and saving across a rejoin.
 
 ## Not ported yet
-- Themed packs. Random games only, like the website's main mode.
 - Crowd rarity, where scores come from what real players answer. See `../ROBLOX.md`, section 1.
 - A global leaderboard. The in-game player list already shows Coins and Best.

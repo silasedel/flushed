@@ -29,6 +29,13 @@ function Profiles.load(player)
 		for attempt = 1, 3 do
 			local ok, res = pcall(function() return store:GetAsync(keyOf(player)) end)
 			if ok then data = res; break end
+			-- Studio without "Enable Studio Access to API Services" (or an unpublished place): don't keep retrying
+			local msg = tostring(res)
+			if msg:find("Studio") or msg:find("publish") or msg:find("API") then
+				warn("[FLUSHED] Saving is off in this Studio session (Game Settings > Security > Enable Studio Access to API Services). Playing without saving.")
+				store = nil
+				break
+			end
 			warn("[FLUSHED] load failed, retrying:", res)
 			task.wait(attempt)
 		end

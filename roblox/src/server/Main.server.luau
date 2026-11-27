@@ -37,6 +37,14 @@ local function leaderstats(player, p)
 	ls.Best.Value = p.stats.best
 end
 
+local function packList(p)
+	local out = {}
+	for _, pk in Config.PACKS do
+		table.insert(out, { key = pk.key, name = pk.name, blurb = pk.blurb, count = #(Bank.byPack[pk.key] or {}), best = (p.packBest or {})[pk.key] })
+	end
+	return out
+end
+
 local function profileView(player)
 	local p = Profiles.get(player)
 	if not p then return nil end
@@ -47,7 +55,7 @@ local function profileView(player)
 	return {
 		coins = p.coins, prices = prices, boost = b,
 		profitAt = { ["5"] = Economy.profitAt(5, b.x), ["7"] = Economy.profitAt(7, b.x), ["10"] = Economy.profitAt(10, b.x), ["0"] = Economy.profitAt(0, b.x) },
-		owned = p.owned, equip = p.equip, boosts = p.boosts,
+		owned = p.owned, equip = p.equip, boosts = p.boosts, packs = packList(p),
 		stats = { games = st.games, best = st.best, avg = st.prompts > 0 and math.floor(st.total / st.prompts * 10 + 0.5) / 10 or 0, tiers = st.tiers },
 		inGame = games[player] ~= nil,
 	}
@@ -56,7 +64,7 @@ end
 local function promptView(g)
 	local q = Bank.byId[g.ids[g.idx]]
 	return {
-		idx = g.idx, total = g.len > 0 and g.len or nil, prompt = q.q, pack = q.pack,
+		idx = g.idx, total = g.len > 0 and g.len or nil, prompt = q.q, pack = q.pack, packName = g.pack and g.pack.name,
 		seconds = g.answerSeconds, score = g.score, ranked = g.ranked,
 	}
 end
@@ -110,6 +118,10 @@ local function finish(player, g)
 		st.total += g.score
 		st.prompts += played
 		st.best = math.max(st.best, g.score)
+		if g.pack then
+			p.packBest = p.packBest or {}
+			p.packBest[g.pack.key] = math.max(p.packBest[g.pack.key] or 0, g.score)
+		end
 	end
 	games[player] = nil
 	leaderstats(player, p)
@@ -121,7 +133,7 @@ local function finish(player, g)
 		table.insert(rows, { prompt = q.q, answer = r.display or "—", score = r.score })
 	end
 	return {
-		done = true, score = g.score, prompts = played, ranked = g.ranked, price = g.price, boost = g.boost,
+		done = true, score = g.score, prompts = played, ranked = g.ranked, pack = g.pack and g.pack.key, packName = g.pack and g.pack.name, price = g.price, boost = g.boost,
 		paid = paid, cheated = g.cheated, percentile = Economy.percentile(math.max(1, played), g.score), rows = rows,
 		profile = profileView(player),
 	}
@@ -140,8 +152,13 @@ function actions.start(player, args)
 	if games[player] then return { error = "You're already in a game." } end
 	local len = tonumber(args.len) or 10
 	if not table.find(Config.LENGTHS, len) then len = 10 end
+	local pack = nil
+	if args.mode == "pack" then
+		for _, pk in Config.PACKS do if pk.key == args.pack then pack = pk end end
+		if not pack then return { error = "Unknown pack." } end
+	end
 	local ranked = args.mode == "ranked"
-	local g = { ranked = ranked, len = len, results = {}, score = 0, idx = 1, profile = p, answerSeconds = Config.ANSWER_SECONDS }
+	local g = { ranked = ranked, pack = pack, len = len, results = {}, score = 0, idx = 1, profile = p, answerSeconds = Config.ANSWER_SECONDS }
 	if ranked then
 		g.len = Economy.rankedLen(len)
 		g.price = Economy.price(g.len)
@@ -154,7 +171,7 @@ function actions.start(player, args)
 			g.extraTime = true
 		end
 	end
-	g.ids = Picker.pick(p, g.len > 0 and g.len or 10)
+	g.ids = Picker.pick(p, g.len > 0 and g.len or 10, nil, pack and pack.key)
 	games[player] = g
 	leaderstats(player, p)
 	startPrompt(g, Config.INTRO_SECONDS)
@@ -205,7 +222,7 @@ function actions.next(player)
 	if g.len > 0 and g.idx >= g.len then return finish(player, g) end
 	g.idx += 1
 	if g.len == 0 and g.idx > #g.ids then -- endless: draw 10 more, avoiding everything already played
-		for _, id in Picker.pick(g.profile, 10, g.ids) do table.insert(g.ids, id) end
+		for _, id in Picker.pick(g.profile, 10, g.ids, g.pack and g.pack.key) do table.insert(g.ids, id) end
 	end
 	startPrompt(g)
 	return { prompt = promptView(g) }

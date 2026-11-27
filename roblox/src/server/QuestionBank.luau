@@ -1,7 +1,7 @@
 -- Loads every prompt from the Questions folder (JSON chunks made by tools/roblox-export.js).
 local HttpService = game:GetService("HttpService")
 
-local Bank = { all = {}, byId = {}, casual = {} }
+local Bank = { all = {}, byId = {}, casual = {}, byPack = {} }
 
 local chunks = script.Parent:WaitForChild("Questions"):GetChildren()
 table.sort(chunks, function(a, b) return a.Name < b.Name end)
@@ -14,6 +14,8 @@ for _, mod in chunks do
 			q.famous = q.flags:find("f", 1, true) ~= nil
 			q.fandom = q.flags:find("d", 1, true) ~= nil
 			table.insert(Bank.all, q)
+			Bank.byPack[q.pack] = Bank.byPack[q.pack] or {}
+			table.insert(Bank.byPack[q.pack], q)
 			Bank.byId[q.id] = q
 			-- random games use prompts ~90% of players can answer, and nothing that needs you to have seen a show
 			if q.diff == "easy" and not q.fandom then table.insert(Bank.casual, q) end

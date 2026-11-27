@@ -21,6 +21,22 @@ Config.COMEBACK_AFTER = 3 -- ...this many ranked losses in a row
 Config.WEIGHTS = { science = 4, geography = 3.2, general = 2.6, language = 1.3, fun = 0.8, sports = 0.6, gaming = 0.55, pop = 0.45, music = 0.35, movies = 0.3 }
 Config.ENTERTAINMENT = { pop = true, movies = true, music = true } -- at most 2 per game
 
+-- Themed packs: one topic, a difficulty ramp (3 easy, 3 medium, 1 hard, then easy/medium for longer games).
+-- Free to play (pays like a free game); ranked stays random-topic only.
+Config.PACKS = {
+	{ key = "geography", name = "Geography", blurb = "Countries, capitals, rivers, peaks and every corner of the map." },
+	{ key = "science", name = "Science & Nature", blurb = "Elements, planets, the human body and the animal kingdom." },
+	{ key = "general", name = "History & General", blurb = "Wars, inventions, presidents, food and everyday knowledge." },
+	{ key = "language", name = "Language & Lit", blurb = "Words, alphabets, languages and literature." },
+	{ key = "movies", name = "Movies & TV", blurb = "Directors, franchises, characters and the small screen." },
+	{ key = "music", name = "Music", blurb = "Instruments, bands, albums, composers and musicals." },
+	{ key = "sports", name = "Sports", blurb = "Teams, tournaments, legends and the rules of the game." },
+	{ key = "gaming", name = "Gaming", blurb = "Pokémon, Minecraft, Nintendo, consoles and classics." },
+	{ key = "pop", name = "Pop Culture", blurb = "Celebrities, internet, apps, snacks and everything trending." },
+	{ key = "fun", name = "Fun & Random", blurb = "Things that use suction, junk-drawer finds, Minecraft blocks and more." },
+}
+Config.PACK_MIX = { "easy", "easy", "easy", "medium", "medium", "medium", "hard" }
+
 -- Shop: cosmetics and boosts bought with Flush Coins. `color` tints the duck/toilet pixel art (shade-preserving),
 -- `fx` adds an effect (diamond sparkle, rainbow, million-coin crown), `sprite` swaps the toilet art, `trail` = trail kind.
 -- Robux items go in ROBUX_PASSES below (cosmetic only).

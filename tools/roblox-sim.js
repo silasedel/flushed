@@ -156,10 +156,12 @@ local function call(p, a, args) T += 0.5; local r = invoke(p, a, args); return r
 local Match = req(shared:WaitForChild("Match"))
 local Bank = req(server:WaitForChild("QuestionBank"))
 local problems = 0
+local diffs = nil
 local function check(cond, msg) if not cond then problems += 1; print("PROBLEM: " .. msg) end end
 
-local function playGame(p, mode, len, style)
-  local r = call(p, "start", { mode = mode, len = len })
+local function playGame(p, mode, len, style, pack)
+  local r = call(p, "start", { mode = mode, len = len, pack = pack })
+  T += 3.2 -- the flush animation
   if r.error then return r end
   check(r.prompt and r.prompt.prompt, "start gave no prompt")
   local seenIds, n = {}, 0
@@ -168,6 +170,11 @@ local function playGame(p, mode, len, style)
     local q
     for _, x in Bank.all do if x.q == r.prompt.prompt then q = x end end
     check(q ~= nil, "prompt text not in bank")
+    if pack then
+      check(q.pack == pack, "pack game served another topic: " .. q.id)
+      diffs = diffs or {}
+      table.insert(diffs, q.diff)
+    end
     local res
     if style == "timeout" or (style == "mixed" and n % 3 == 0) then
       T += 30; res = call(p, "timeout")
@@ -208,6 +215,24 @@ for i = 1, 4 do
   games += 1
 end
 print(string.format("free games ok; coins now %d", call(p1, "profile").coins))
+
+-- every themed pack: right topic, 3 easy / 3 medium / 1 hard, best score saved
+local Config = req(shared:WaitForChild("Config"))
+for _, pk in Config.PACKS do
+  diffs = {}
+  local res = playGame(p1, "pack", 7, "hit", pk.key)
+  check(res.done and res.packName == pk.name, "pack game finished: " .. pk.key)
+  check(not res.ranked, "packs are free games")
+  local order = table.concat(diffs, ",")
+  local ramp = { easy = 0, medium = 1, hard = 2 }
+  local okRamp = true
+  for i = 2, #diffs do if ramp[diffs[i]] < ramp[diffs[i - 1]] then okRamp = false end end
+  check(okRamp, pk.key .. " pack not ramped: " .. order)
+  print(string.format("pack %-10s %s", pk.key, order))
+end
+local prof2 = call(p1, "profile")
+check(prof2.packs and #prof2.packs == #Config.PACKS and prof2.packs[1].best ~= nil, "pack list with best scores")
+check(call(p1, "start", { mode = "pack", pack = "nope" }).error ~= nil, "unknown pack rejected")
 
 -- ranked: entry charged, boost applied, payout matches Economy
 local Economy = req(shared:WaitForChild("Economy"))
