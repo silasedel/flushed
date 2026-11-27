@@ -45,6 +45,7 @@ The results screen shows a score curve and "better than X% of flushers". On the 
 average player (`AVG_PROMPT` in js/game.js: 11% miss, 45% NPC, 25% Mid, 12% Rizz, 5% Skibidi, 2% Sigma per prompt).
 On Roblox, keep a histogram of final scores per game length (5 / 7 / 10, and endless per prompt count) in DataStore,
 and draw the real curve and percentile from it once there are a few hundred games; fall back to the model before that.
+Leave cheated games (the 6996 test code) out of that histogram, just like the web version leaves them out of your average.
 
 ## 2. How it maps to Roblox
 

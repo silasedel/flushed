@@ -253,7 +253,7 @@
     if (!val) { shake(); return; }
     const n = window.Match.norm(val);
     // secret cheat: 6996 = instant Sigma (the prompt's one-in-a-million answer)
-    if (val.replace(/\s/g, '') === '6996') { const sig = parseAnswers(curQ()).list.find(x => x.score === 100); if (sig) { clearSuggest(); return accept(sig, val, sig.name); } }
+    if (val.replace(/\s/g, '') === '6996') { const sig = parseAnswers(curQ()).list.find(x => x.score === 100); if (sig) { clearSuggest(); return accept(sig, val, sig.name, undefined, true); } }
     // second Enter on a suggestion accepts it
     if (pendingSuggest && pendingSuggest.n === n) { const a = pendingSuggest.answer, typed = pendingSuggest.typed, lb = pendingSuggest.label; clearSuggest(); return accept(a, typed, lb !== a.name ? lb : undefined); }
     const m = window.Match.matchExact(curQ(), val);
@@ -280,14 +280,15 @@
   let pendingSuggest = null;
   function clearSuggest() { pendingSuggest = null; $('#suggest-box').hidden = true; }
   const titleCase = s => s.trim().replace(/\s+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-  function accept(ans, input, display, scoreOverride) {
+  function accept(ans, input, display, scoreOverride, cheat) {
     clearSuggest();
     if (scoreOverride) ans = Object.assign({}, ans, { score: scoreOverride });
     const t = tierOf(ans.score);
     // display: what the player typed when it was a longer phrase containing a valid answer
     G.results[G.idx] = { id: G.ids[G.idx], answer: display || ans.name, matched: ans.name, input, score: ans.score, tries: G.tries.slice() };
+    if (cheat) G.results[G.idx].cheat = true; // 6996 test cheat: the game plays out, but it stays out of your stats
     G.sinkFrom = G.depth; G.score += ans.score; G.depth += Math.round(t.depth * depthScale(lenOf(G)));
-    store.tiers[ans.score] = (store.tiers[ans.score] || 0) + 1;
+    if (!cheat) store.tiers[ans.score] = (store.tiers[ans.score] || 0) + 1;
     Sound.correct(ans.score);
     sink();
   }
@@ -321,7 +322,7 @@
 
   function finish(silent) {
     if (!lenOf(G)) G.ids = G.ids.slice(0, Math.max(1, G.results.length)); // endless: only the prompts actually played
-    const entry = { mode: G.mode, key: G.key, len: lenOf(G), ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
+    const entry = { cheated: G.results.some(r => r && r.cheat) || undefined, mode: G.mode, key: G.key, len: lenOf(G), ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
     if (G.mode === 'daily') { entry.dayNo = dayIndex(G.key) + 1; store.daily[G.key] = entry; }
     if (G.mode === 'archive') { const a = store.archive[G.key] || { best: 0, plays: 0 }; a.plays++; a.best = Math.max(a.best, entry.score); store.archive[G.key] = a; entry.dayNo = dayIndex(G.key) + 1; }
     store.history.push(entry); if (store.history.length > 400) store.history.splice(0, store.history.length - 400);
@@ -376,7 +377,7 @@
     const k = todayKey(); const done = store.daily[k];
     $('#begin-label').textContent = G ? 'KEEP FLUSHING' : 'FLUSH';
     renderLenPick();
-    const all = store.history; const best = Math.max(0, ...all.map(h => h.score));
+    const all = cleanGames(); const best = Math.max(0, ...all.map(h => h.score));
     $('#daily-note').innerHTML = all.length ? `PLAYED <b>${all.length}</b> · BEST <b>${best}</b>` : '';
     return;
     const streak = streaks().current;
@@ -611,8 +612,9 @@
     // logbook
     const st = streaks(); const all = store.history;
     $('#st-streak').textContent = st.current; $('#st-played').textContent = all.length;
-    $('#st-avg').textContent = all.length ? Math.round(all.reduce((n, h) => n + h.score, 0) / all.length) : 0;
-    $('#st-best').textContent = Math.max(0, ...all.map(h => h.score));
+    const clean = cleanGames();
+    $('#st-avg').textContent = clean.length ? Math.round(clean.reduce((n, h) => n + h.score, 0) / clean.length) : 0;
+    $('#st-best').textContent = Math.max(0, ...clean.map(h => h.score));
     // the catch
     const list = $('#log-list'); list.innerHTML = '';
     entry.results.forEach((r, i) => {
@@ -762,35 +764,33 @@
     while (store.daily[k]) { cur++; k = addDays(k, -1); }
     return { current: cur, max };
   }
+  const cleanGames = () => store.history.filter(h => !h.cheated); // games where you used the 6996 cheat don't count
   function statsHtml() {
-    const dailies = Object.values(store.daily); const all = store.history;
-    const st = streaks();
-    const avg = dailies.length ? Math.round(dailies.reduce((s, e) => s + e.score, 0) / dailies.length) : 0;
-    const bestDaily = Math.max(0, ...dailies.map(e => e.score));
+    const games = store.history, all = cleanGames();
+    const per = e => e.score / Math.max(1, e.results.length); // points per prompt, comparable across game lengths
+    const avg = all.length ? Math.round(all.reduce((n, e) => n + e.score, 0) / all.length) : 0;
+    const avgPer = all.length ? Math.round(all.reduce((n, e) => n + per(e), 0) / all.length) : 0;
     const best = Math.max(0, ...all.map(e => e.score));
     const deepest = Math.max(0, ...all.map(e => e.depth));
-    const answered = all.reduce((s, e) => s + e.results.filter(r => r.score).length, 0);
-    const total = all.reduce((s, e) => s + e.results.length, 0);
-    const bins = new Array(7).fill(0); dailies.forEach(e => bins[Math.min(6, Math.floor(e.score / 100))]++);
+    const answered = all.reduce((n, e) => n + e.results.filter(r => r.score).length, 0);
+    const total = all.reduce((n, e) => n + e.results.length, 0);
+    const bins = new Array(10).fill(0); all.forEach(e => bins[Math.min(9, Math.floor(per(e) / 10))]++);
     const bmax = Math.max(1, ...bins);
     const tmax = Math.max(1, ...TIERS.map(t => store.tiers[t.score] || 0));
     return `
       <div class="stat-grid">
-        <div><b>${dailies.length}</b><span>DAILY FLUSHES</span></div>
-        <div><b>${st.current}</b><span>STREAK</span></div>
-        <div><b>${st.max}</b><span>MAX STREAK</span></div>
-        <div><b>${bestDaily}</b><span>BEST DAILY</span></div>
-        <div><b>${avg}</b><span>AVG DAILY</span></div>
-        <div><b>${all.length}</b><span>ALL FLUSHES</span></div>
+        <div><b>${games.length}</b><span>FLUSHES</span></div>
         <div><b>${best}</b><span>PERSONAL BEST</span></div>
+        <div><b>${avg}</b><span>AVG SCORE</span></div>
+        <div><b>${avgPer}</b><span>AVG PER PROMPT</span></div>
         <div><b>${fmt(deepest)}m</b><span>DEEPEST</span></div>
         <div><b>${total ? Math.round(answered / total * 100) : 0}%</b><span>ANSWERED</span></div>
       </div>
-      <h3 class="mh">DAILY SCORE SPREAD</h3>
-      <div class="bars">${bins.map((b, i) => `<div class="bar-row"><span>${i * 100}${i === 6 ? '+' : '–' + (i * 100 + 99)}</span><i style="width:${(b / bmax) * 100}%"></i><em>${b}</em></div>`).join('')}</div>
+      <h3 class="mh">POINTS PER PROMPT</h3>
+      <div class="bars">${bins.map((b, i) => `<div class="bar-row"><span>${i * 10}${i === 9 ? '+' : '–' + (i * 10 + 9)}</span><i style="width:${(b / bmax) * 100}%"></i><em>${b}</em></div>`).join('')}</div>
       <h3 class="mh">RARITIES FOUND</h3>
       <div class="bars">${TIERS.map(t => `<div class="bar-row"><span style="color:${t.color}">${t.name}</span><i style="width:${((store.tiers[t.score] || 0) / tmax) * 100}%;background:${t.color}"></i><em>${store.tiers[t.score] || 0}</em></div>`).join('')}</div>
-      <p class="fine">Next Daily Flush in <b class="cd">${hms(msToMidnight())}</b></p>
+      <p class="fine">Games where you used a cheat code still count as played, but not toward your best or average.</p>
       <button class="btn btn-ghost small" id="btn-reset-stats">RESET STATISTICS</button>`;
   }
   function openStats() {
