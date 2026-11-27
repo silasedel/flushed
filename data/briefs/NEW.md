@@ -40,9 +40,17 @@ Write ONLY your assigned file(s) in data/questions/ (named in your task), format
 `diff:"easy"`, `pack` = one of: geography, science, general, language, fun, pop, sports, gaming, music, movies.
 Use your assigned id prefix, numbered from 0001 (e.g. "xsci-0001"). Don't touch any other file.
 
+## Must not feel like a repeat (wave 3 rule)
+Players complained prompts feel repetitive. Every new prompt must pass:
+`node tools/similar.js data/questions/<your file>.js` → must print "OK: nothing too similar."
+It flags any prompt whose answers overlap another prompt's by 45%+ (including being a subset, e.g. "fruit you peel" vs
+"a fruit") or whose wording nearly matches. Fix by choosing a genuinely different angle, not by trimming answers.
+Also vary the sentence shape across your file: not 20 prompts that all read "Name a ___ that ___."
+
 ## Check before finishing
 ```
 node tools/validate.js data/questions/<your file>.js   # must end with OK
+node tools/similar.js data/questions/<your file>.js    # must say OK
 node tools/build.js && node tools/test.js              # must report 0 failures
 node tools/try.js <id> "some answer" "another"         # spot-check matching
 ```
