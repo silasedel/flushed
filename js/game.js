@@ -588,6 +588,7 @@
     $('#res-depth').textContent = `-${fmt(entry.depth)}m`;
     $('#res-zone').textContent = entry.depth ? `Reached the ${Ocean.ZONES[Ocean.zoneIndex(entry.depth)].name}` : 'Never left the bowl';
     drawDiveChart(entry);
+    drawStack(entry);
     // bearing
     const n = countOf(entry), sc = n / 7, norm = entry.score / sc; // bands are written for 7 prompts
     $('#bearing').innerHTML = BEARING.map((b, i) => {
@@ -618,6 +619,57 @@
     updateCountdown();
     setTimeout(() => $('#btn-share').focus({ preventScroll: true }), 60);
   }
+  // ---------- how you stack up ----------
+  // How an average player does on one prompt (share of answers per score). It's a fixed model for now; on Roblox it
+  // gets replaced by real score counts (see ROBLOX.md). A game's score curve is this convolved n times.
+  const AVG_PROMPT = { 0: 0.11, 10: 0.45, 30: 0.25, 60: 0.12, 85: 0.05, 100: 0.02 };
+  function scoreCurve(n) {
+    let dist = [1]; // index = points / 5
+    const step = Object.entries(AVG_PROMPT).map(([p, w]) => [Number(p) / 5, w]);
+    for (let i = 0; i < n; i++) {
+      const next = new Array(dist.length + 20).fill(0);
+      dist.forEach((v, k) => { if (v) for (const [s, w] of step) next[k + s] += v * w; });
+      dist = next;
+    }
+    return dist; // dist[k] = chance of scoring exactly 5k
+  }
+  function percentile(dist, score) {
+    const k = Math.round(score / 5); let below = 0;
+    for (let i = 0; i < Math.min(k, dist.length); i++) below += dist[i];
+    return Math.round(100 * (below + 0.5 * (dist[k] || 0)));
+  }
+  function drawStack(entry) {
+    const n = Math.max(1, countOf(entry)), dist = scoreCurve(Math.min(n, 120)), pct = percentile(dist, entry.score);
+    const W = 480, H = 170, L = 10, R = 10, T = 22, B = 26;
+    // show the part of the curve where players actually land (0.2%–99.8%), plus your score
+    let lo = 0, hi = dist.length - 1, c = 0;
+    for (let i = 0; i < dist.length; i++) { c += dist[i]; if (c < 0.002) lo = i; if (c < 0.998) hi = i + 1; }
+    const you = Math.round(entry.score / 5); lo = Math.max(0, Math.min(lo, you - 2)); hi = Math.min(dist.length - 1, Math.max(hi, you + 2));
+    // smooth the bumpy discrete distribution into a clean slope
+    const sm = dist.map((_, i) => { let s = 0, w = 0; for (let j = -3; j <= 3; j++) { const v = dist[i + j]; if (v !== undefined) { const ww = 4 - Math.abs(j); s += v * ww; w += ww; } } return s / w; });
+    const peak = Math.max(...sm.slice(lo, hi + 1));
+    const x = i => L + ((i - lo) / Math.max(1, hi - lo)) * (W - L - R), y = v => H - B - (v / peak) * (H - T - B);
+    let line = '', fillYou = '';
+    for (let i = lo; i <= hi; i++) line += `${i === lo ? 'M' : 'L'}${x(i).toFixed(1)},${y(sm[i]).toFixed(1)} `;
+    for (let i = lo; i <= Math.min(you, hi); i++) fillYou += `${i === lo ? 'M' : 'L'}${x(i).toFixed(1)},${y(sm[i]).toFixed(1)} `;
+    const yx = x(Math.min(Math.max(you, lo), hi)), yy = y(sm[Math.min(Math.max(you, lo), hi)]);
+    const per = entry.score / n, t = tierOf(per >= 70 ? 100 : per >= 50 ? 85 : per >= 35 ? 60 : per >= 20 ? 30 : 10); // color by your points per prompt
+    const avg = dist.reduce((s, v, i) => s + v * i * 5, 0);
+    let svg = `<path d="${line} L${x(hi).toFixed(1)},${H - B} L${x(lo).toFixed(1)},${H - B} Z" class="sc-all"/>`;
+    svg += `<path d="${fillYou} L${yx.toFixed(1)},${H - B} L${x(lo).toFixed(1)},${H - B} Z" class="sc-you" style="fill:${t.color}"/>`;
+    svg += `<path d="${line}" class="sc-line"/>`;
+    svg += `<line x1="${x(Math.round(avg / 5)).toFixed(1)}" x2="${x(Math.round(avg / 5)).toFixed(1)}" y1="${T - 6}" y2="${H - B}" class="sc-avg"/><text x="${x(Math.round(avg / 5)).toFixed(1)}" y="${T - 9}" class="sc-ax" text-anchor="middle">AVG ${Math.round(avg)}</text>`;
+    svg += `<line x1="${yx.toFixed(1)}" x2="${yx.toFixed(1)}" y1="${(yy - 14).toFixed(1)}" y2="${H - B}" stroke="${t.color}" class="sc-you-line"/>`;
+    svg += `<image href="${iconURL(t.key)}" x="${(yx - 14).toFixed(1)}" y="${(yy - 44).toFixed(1)}" width="28" height="28" class="pix-svg"/>`;
+    svg += `<text x="${yx.toFixed(1)}" y="${(yy - 48).toFixed(1)}" class="sc-you-t" text-anchor="middle" style="fill:${t.color}">YOU ${entry.score}</text>`;
+    svg += `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" class="sc-base"/>`;
+    for (const f of [0, 0.25, 0.5, 0.75, 1]) { const i = Math.round(lo + f * (hi - lo)); svg += `<text x="${x(i).toFixed(1)}" y="${H - 8}" class="sc-ax" text-anchor="middle">${i * 5}</text>`; }
+    $('#stack-chart').innerHTML = svg;
+    const word = pct >= 99 ? 'Top 1%. Certified Sigma.' : pct >= 90 ? 'Built different.' : pct >= 70 ? 'Above the crowd.' : pct >= 45 ? 'Right in the pack.' : pct >= 20 ? 'Kinda NPC behavior.' : 'Still in the bowl.';
+    $('#stack-line').innerHTML = `Better than <b style="color:${t.color}">${Math.min(99, Math.max(1, pct))}%</b> of flushers. <span>${word}</span>`;
+    $('#stack-sub').textContent = `VS. THE AVERAGE ${n}-PROMPT FLUSH`;
+  }
+
   function drawDiveChart(entry) {
     const W = 480, H = 270, L = 34, R = 14, T = 14, B = 30;
     const n = Math.max(1, entry.results.length); const slot = (W - L - R) / n;

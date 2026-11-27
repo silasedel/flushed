@@ -40,6 +40,12 @@ Players could also see "**3% of players said this**" on the reveal once a prompt
 Answers nobody has thought of yet (not in our list) are still rejected, but log them (privately,
 for us to review) so the list grows with what players actually type.
 
+### "How you stack up" curve
+The results screen shows a score curve and "better than X% of flushers". On the web it comes from a fixed model of an
+average player (`AVG_PROMPT` in js/game.js: 11% miss, 45% NPC, 25% Mid, 12% Rizz, 5% Skibidi, 2% Sigma per prompt).
+On Roblox, keep a histogram of final scores per game length (5 / 7 / 10, and endless per prompt count) in DataStore,
+and draw the real curve and percentile from it once there are a few hundred games; fall back to the model before that.
+
 ## 2. How it maps to Roblox
 
 | Web prototype | Roblox |
