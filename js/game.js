@@ -654,7 +654,7 @@
   }
   function drawStack(entry) {
     const n = Math.max(1, countOf(entry)), dist = scoreCurve(Math.min(n, 120)), pct = percentile(dist, entry.score);
-    const W = 480, H = 170, L = 10, R = 10, T = 22, B = 26;
+    const W = 480, H = 230, L = 10, R = 10, T = 74, B = 26; // T leaves room above the curve for your icon + label
     // show the part of the curve where players actually land (0.2%–99.8%), plus your score
     let lo = 0, hi = dist.length - 1, c = 0;
     for (let i = 0; i < dist.length; i++) { c += dist[i]; if (c < 0.002) lo = i; if (c < 0.998) hi = i + 1; }
@@ -672,10 +672,13 @@
     let svg = `<path d="${line} L${x(hi).toFixed(1)},${H - B} L${x(lo).toFixed(1)},${H - B} Z" class="sc-all"/>`;
     svg += `<path d="${fillYou} L${yx.toFixed(1)},${H - B} L${x(lo).toFixed(1)},${H - B} Z" class="sc-you" style="fill:${t.color}"/>`;
     svg += `<path d="${line}" class="sc-line"/>`;
-    svg += `<line x1="${x(Math.round(avg / 5)).toFixed(1)}" x2="${x(Math.round(avg / 5)).toFixed(1)}" y1="${T - 6}" y2="${H - B}" class="sc-avg"/><text x="${x(Math.round(avg / 5)).toFixed(1)}" y="${T - 9}" class="sc-ax" text-anchor="middle">AVG ${Math.round(avg)}</text>`;
-    svg += `<line x1="${yx.toFixed(1)}" x2="${yx.toFixed(1)}" y1="${(yy - 14).toFixed(1)}" y2="${H - B}" stroke="${t.color}" class="sc-you-line"/>`;
-    svg += `<image href="${iconURL(t.key)}" x="${(yx - 14).toFixed(1)}" y="${(yy - 44).toFixed(1)}" width="28" height="28" class="pix-svg"/>`;
-    svg += `<text x="${yx.toFixed(1)}" y="${(yy - 48).toFixed(1)}" class="sc-you-t" text-anchor="middle" style="fill:${t.color}">YOU ${entry.score}</text>`;
+    const ax = x(Math.round(avg / 5)), near = Math.abs(ax - yx) < 70; // keep the AVG label clear of your marker
+    const aLabelX = near ? (ax < yx ? ax - 6 : ax + 6) : ax, aAnchor = near ? (ax < yx ? 'end' : 'start') : 'middle';
+    svg += `<line x1="${ax.toFixed(1)}" x2="${ax.toFixed(1)}" y1="${T - 6}" y2="${H - B}" class="sc-avg"/><text x="${aLabelX.toFixed(1)}" y="${T - 9}" class="sc-ax" text-anchor="${aAnchor}">AVG ${Math.round(avg)}</text>`;
+    svg += `<line x1="${yx.toFixed(1)}" x2="${yx.toFixed(1)}" y1="${(Math.max(18, yy - 44) + 28).toFixed(1)}" y2="${H - B}" stroke="${t.color}" class="sc-you-line"/>`;
+    const iy = Math.max(18, yy - 44), lx = Math.min(W - 40, Math.max(40, yx)); // never above the chart, never off its sides
+    svg += `<image href="${iconURL(t.key)}" x="${(yx - 14).toFixed(1)}" y="${iy.toFixed(1)}" width="28" height="28" class="pix-svg"/>`;
+    svg += `<text x="${lx.toFixed(1)}" y="${(iy - 5).toFixed(1)}" class="sc-you-t" text-anchor="middle" style="fill:${t.color}">YOU ${entry.score}</text>`;
     svg += `<line x1="${L}" x2="${W - R}" y1="${H - B}" y2="${H - B}" class="sc-base"/>`;
     for (const f of [0, 0.25, 0.5, 0.75, 1]) { const i = Math.round(lo + f * (hi - lo)); svg += `<text x="${x(i).toFixed(1)}" y="${H - 8}" class="sc-ax" text-anchor="middle">${i * 5}</text>`; }
     $('#stack-chart').innerHTML = svg;
