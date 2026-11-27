@@ -252,8 +252,8 @@
     const inp = $('#answer'); const val = inp.value.trim();
     if (!val) { shake(); return; }
     const n = window.Match.norm(val);
-    // secret cheat: 6996 = instant Sigma (the prompt's one-in-a-million answer)
-    if (val.replace(/\s/g, '') === '6996') { const sig = parseAnswers(curQ()).list.find(x => x.score === 100); if (sig) { clearSuggest(); return accept(sig, val, sig.name, undefined, true); } }
+    // secret cheat: 6969 = instant Sigma (the prompt's one-in-a-million answer)
+    if (val.replace(/\s/g, '') === '6969') { const sig = parseAnswers(curQ()).list.find(x => x.score === 100); if (sig) { clearSuggest(); return accept(sig, val, sig.name, undefined, true); } }
     // second Enter on a suggestion accepts it
     if (pendingSuggest && pendingSuggest.n === n) { const a = pendingSuggest.answer, typed = pendingSuggest.typed, lb = pendingSuggest.label; clearSuggest(); return accept(a, typed, lb !== a.name ? lb : undefined); }
     const m = window.Match.matchExact(curQ(), val);
@@ -286,7 +286,7 @@
     const t = tierOf(ans.score);
     // display: what the player typed when it was a longer phrase containing a valid answer
     G.results[G.idx] = { id: G.ids[G.idx], answer: display || ans.name, matched: ans.name, input, score: ans.score, tries: G.tries.slice() };
-    if (cheat) G.results[G.idx].cheat = true; // 6996 test cheat: the game plays out, but it stays out of your stats
+    if (cheat) G.results[G.idx].cheat = true; // 6969 test cheat: the game plays out, but it stays out of your stats
     G.sinkFrom = G.depth; G.score += ans.score; G.depth += Math.round(t.depth * depthScale(lenOf(G)));
     if (!cheat) store.tiers[ans.score] = (store.tiers[ans.score] || 0) + 1;
     Sound.correct(ans.score);
