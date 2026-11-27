@@ -157,13 +157,12 @@
     beginQuestion(0, true);
   }
 
-  const INTRO_MS = 2200;
+  const INTRO_MS = 2500;
   function beginQuestion(i, fresh) {
     G.idx = i; G.input = ''; G.tries = [];
-    if (fresh) { // first prompt: the shrimp dives off the boat before the clock starts
+    if (fresh) { // first prompt: the duck gets flushed down the toilet before the clock starts
       G.phase = 'intro'; G.phaseEnd = Date.now() + INTRO_MS;
-      Ocean.setView('intro', true); Ocean.setShrimpX(0.8);
-      Ocean.setDepth(-250, { instant: true }); Ocean.setDepth(-180, { duration: INTRO_MS - 200 });
+      Ocean.setView('intro', true); Ocean.flush(); Sound.flush();
     } else { G.phase = 'answering'; G.phaseEnd = Date.now() + ANSWER_MS; Sound.go(); }
     save(); renderQuestion();
   }
