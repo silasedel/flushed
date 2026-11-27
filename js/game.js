@@ -22,7 +22,7 @@
   // You start with R$1,000. Normal games are free and pay nothing. Ranked: buy in at the "market price" for the
   // number of prompts, get paid R$1 per 5 points. The price sits ~10% above what an average player wins back, so
   // beating the average = profit and the house keeps a small edge. See ROBLOX.md, "Money" for the real-Roblox rules.
-  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 5, AVG_PER_PROMPT = 25.45; // payout = score ÷ 5, rounded down
+  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 5, AVG_PER_PROMPT = 31.92; // payout = score ÷ 5, rounded down
   const rankedLen = () => (LENGTHS.includes(store.settings.len) && store.settings.len ? store.settings.len : 10);
   // The buy-in follows how players ACTUALLY score (recent prompts), not a fixed guess: if people get better the price
   // rises, if they get worse it falls. Price = average payout for that length + the house cut, so on average the house
@@ -690,16 +690,25 @@
   // ---------- how you stack up ----------
   // How an average player does on one prompt (share of answers per score). It's a fixed model for now; on Roblox it
   // gets replaced by real score counts (see ROBLOX.md). A game's score curve is this convolved n times.
-  const AVG_PROMPT = { 0: 0.11, 10: 0.45, 30: 0.25, 60: 0.12, 85: 0.05, 100: 0.02 };
+  // Real players differ in skill, so the curve is a MIX of player types (casual / average / good / elite), each with its
+  // own odds per prompt. Mixing widens the curve: a 385 in 7 prompts is ~90th percentile, not 99.9th.
+  // (On Roblox this whole model is replaced by real score counts; see ROBLOX.md.)
+  const PLAYER_TYPES = [
+    { w: 0.30, p: { 0: 0.16, 10: 0.50, 30: 0.21, 60: 0.08, 85: 0.035, 100: 0.015 } }, // casual
+    { w: 0.35, p: { 0: 0.10, 10: 0.42, 30: 0.26, 60: 0.13, 85: 0.06, 100: 0.03 } },   // average
+    { w: 0.22, p: { 0: 0.05, 10: 0.28, 30: 0.29, 60: 0.21, 85: 0.11, 100: 0.06 } },   // good
+    { w: 0.13, p: { 0: 0.02, 10: 0.13, 30: 0.23, 60: 0.28, 85: 0.19, 100: 0.15 } },   // elite
+  ];
+  const curveCache = {};
   function scoreCurve(n) {
-    let dist = [1]; // index = points / 5
-    const step = Object.entries(AVG_PROMPT).map(([p, w]) => [Number(p) / 5, w]);
-    for (let i = 0; i < n; i++) {
-      const next = new Array(dist.length + 20).fill(0);
-      dist.forEach((v, k) => { if (v) for (const [s, w] of step) next[k + s] += v * w; });
-      dist = next;
+    if (curveCache[n]) return curveCache[n];
+    const out = [];
+    for (const t of PLAYER_TYPES) {
+      let dist = [1]; const step = Object.entries(t.p).map(([pt, w]) => [Number(pt) / 5, w]);
+      for (let i = 0; i < n; i++) { const next = new Array(dist.length + 20).fill(0); dist.forEach((v, k) => { if (v) for (const [st, w] of step) next[k + st] += v * w; }); dist = next; }
+      dist.forEach((v, i) => { out[i] = (out[i] || 0) + v * t.w; });
     }
-    return dist; // dist[k] = chance of scoring exactly 5k
+    return (curveCache[n] = out); // out[k] = chance of scoring exactly 5k
   }
   function percentile(dist, score) {
     const k = Math.round(score / 5); let below = 0;

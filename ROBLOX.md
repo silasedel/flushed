@@ -41,8 +41,8 @@ Answers nobody has thought of yet (not in our list) are still rejected, but log 
 for us to review) so the list grows with what players actually type.
 
 ### "How you stack up" curve
-The results screen shows a score curve and "better than X% of flushers". On the web it comes from a fixed model of an
-average player (`AVG_PROMPT` in js/game.js: 11% miss, 45% NPC, 25% Mid, 12% Rizz, 5% Skibidi, 2% Sigma per prompt).
+The results screen shows a score curve and "better than X% of flushers". On the web it comes from a fixed model mixing four
+player types (`PLAYER_TYPES` in js/game.js: casual 30%, average 35%, good 22%, elite 13%), which averages ~32 pts/prompt.
 On Roblox, keep a histogram of final scores per game length (5 / 7 / 10, and endless per prompt count) in DataStore,
 and draw the real curve and percentile from it once there are a few hundred games; fall back to the model before that.
 Leave cheated games (the 6969 test code) out of that histogram, just like the web version leaves them out of your average.
@@ -110,10 +110,10 @@ The 6969 cheat code is for testing only — remove it from the Roblox build (or 
 
 ### The profit system (built into the web prototype, port it as-is)
 - **Ranked buy-in tracks the real average.** Entry = (average points per prompt × prompts ÷ 5) × 1.15 (or higher if the profit guard has raised it), rounded up; payout = score ÷ 5, rounded down.
-  The average comes from *recent* ranked prompts (web: this device, blended with a 25.45 prior; Roblox: all players'
+  The average comes from *recent* ranked prompts (web: this device, blended with a ~32 pts/prompt prior; Roblox: all players'
   last ~10,000 ranked prompts in a DataStore, recomputed every few minutes). Players get better → price goes up;
   worse → down. The 5% cut plus rounding (entry up, payout down) means payouts can never outrun buy-ins on average, whatever tricks people find.
-  Starting prices with the default average: 5 prompts = 30, 7 prompts = 41, 10 prompts = 59 (a 230-point run pays 46).
+  Starting prices with the default average (~32 pts/prompt): 5 prompts = 37, 7 prompts = 52, 10 prompts = 74 (a 230-point run pays 46).
 - **Shop (pure profit, no effect on score):** duck skins 100–300, toilet skins 150–400, trails 120–200.
 - **Boost:** Extra Time (+5s every prompt, one ranked run) costs 5 — worth far less than 5 in extra payout on average,
   so it's profitable too. Don't sell boosts that add points directly.
