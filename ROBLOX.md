@@ -109,17 +109,16 @@ Rule of thumb: *anything that can be bought with Robux must never be a stake you
 The 6969 cheat code is for testing only — remove it from the Roblox build (or lock it to your own UserId).
 
 ### The profit system (built into the web prototype, port it as-is)
-- **Ranked buy-in tracks the real average.** Entry = (average points per prompt × prompts ÷ 5) × 1.15 (or higher if the profit guard has raised it), rounded up; payout = score ÷ 5, rounded down.
-  The average comes from *recent* ranked prompts (web: this device, blended with a ~32 pts/prompt prior; Roblox: all players'
-  last ~10,000 ranked prompts in a DataStore, recomputed every few minutes). Players get better → price goes up;
-  worse → down. The 5% cut plus rounding (entry up, payout down) means payouts can never outrun buy-ins on average, whatever tricks people find.
-  Starting prices with the default average (~32 pts/prompt): 5 prompts = 37, 7 prompts = 52, 10 prompts = 74 (a 230-point run pays 46).
+- **Same price for everyone, from the population "par".** Par = the median score for that many prompts (web: the player
+  model; Roblox: all players' recent ranked runs in a DataStore). Entry = par ÷ 5, rounded up — never based on one
+  player's own history. Payout = R$1 per 5 points up to par, then R$1 per 25 points above par, rounded down.
+  Prices now: 5 prompts = 29, 7 = 41, 10 = 58. Beating par = profit; about half of runs win; big scores still pay more.
+- **Visible boosts (the hook), shown on the ranked button:** NEW PLAYER ×1.3 / ×1.2 / ×1.1 on the first 3 ranked runs
+  (first-run win rate ~66%), and COMEBACK ×1.3 on the next run after 3 losses in a row. Nothing is hidden or secretly
+  rigged — Roblox bans undisclosed odds manipulation, and visible boosts hook players just as well.
+- **Simulated (40,000 players × 25 runs, 7 prompts):** ~50% of runs win, house margin ~+6% overall.
 - **Shop (pure profit, no effect on score):** duck skins 100–300, toilet skins 150–400, trails 120–200.
 - **Boost:** Extra Time (+5s every prompt, one ranked run) costs 5 — worth far less than 5 in extra payout on average,
   so it's profitable too. Don't sell boosts that add points directly.
 - On real Roblox, keep the Section 5 rule: Robux buys shop items/passes; the ranked stake must be an earn-only currency.
-- **Profit guard (self-correcting).** The server keeps a ledger of the last 40 ranked runs (entries in, payouts out).
-  If the house margin drops under 15% (players winning for any reason), the price multiplier rises 4% per run until
-  the margin is back on target; once it's comfortably above (20%+) it drifts back toward the base 5%. Simulated
-  300-run sessions: average/good/pro players and players who suddenly improve all leave the house ~20–28% ahead, and
-  in 200 random sims per player type the house never ended a session down.
+- No per-player profit guard: the edge comes from the reduced rate above par and the rounding, so it holds for everyone.

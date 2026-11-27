@@ -19,38 +19,34 @@
   const depthScale = () => 1; // depth follows points in every game length: ~400 pts = Rat Kingdom, ~500 = disco core, 600+ = insanity
   const lenName = l => (l ? `${l} PROMPTS` : 'ENDLESS');
   // ---------- Pretend Robux (web prototype of the Roblox money loop) ----------
-  // You start with R$1,000. Normal games are free and pay nothing. Ranked: buy in at the "market price" for the
-  // number of prompts, get paid R$1 per 5 points. The price sits ~10% above what an average player wins back, so
-  // beating the average = profit and the house keeps a small edge. See ROBLOX.md, "Money" for the real-Roblox rules.
-  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 5, AVG_PER_PROMPT = 31.92; // payout = score ÷ 5, rounded down
+  // You start with R$1,000. Normal games are free and pay nothing. Ranked costs an entry and pays by score.
+  // Everyone pays the SAME price for a length: it comes from the population "par" (the median score in the player
+  // model), never from your own history. Payout: R$1 per 5 points up to par, then R$1 per 25 points above par
+  // (rounded down; entry rounded up). So about half of runs come out ahead, big scores still pay more, and the
+  // house keeps ~6% overall. Visible boosts keep it fun: the first 3 ranked runs pay x1.3 / x1.2 / x1.1, and
+  // after 3 losses in a row the next run pays x1.3. Simulated (25 runs per player, 7 prompts): ~50% of runs win,
+  // ~66% of first runs win, house margin ~+6%. See ROBLOX.md, "Money".
+  const START_COINS = 1000, NORMAL_RATE = Infinity, RANKED_RATE = 5, UPPER_RATE = 0.2;
+  const WELCOME = [1.3, 1.2, 1.1], COMEBACK = 1.3, COMEBACK_AFTER = 3;
   const rankedLen = () => (LENGTHS.includes(store.settings.len) && store.settings.len ? store.settings.len : 10);
-  // The buy-in follows how players ACTUALLY score (recent prompts), not a fixed guess: if people get better the price
-  // rises, if they get worse it falls. Price = average payout for that length + the house cut, so on average the house
-  // always takes in more than it pays out. Web: this device's recent prompts blended with the model. Roblox: every
-  // player's recent ranked prompts (DataStore), same formula.
-  const HOUSE_CUT = 1.15, PRIOR_PROMPTS = 40; // base: entry = average payout + 15%, rounded up
-  // Profit guard: the house keeps a ledger of recent ranked runs (entries in, payouts out). If the house's margin over
-  // the last 40 runs drops below 8% (players are winning: new tricks, better players, lucky streak), the price multiplier
-  // steps up 4% per run until the house is back on target; when the margin is comfortably above target it drifts back
-  // down toward the base cut. So whatever players do, entries keep running ahead of payouts.
-  const TARGET_MARGIN = 0.15, LEDGER_N = 40;
-  function houseMargin() {
-    const L = (store.ledger || []).slice(-LEDGER_N); const tin = L.reduce((a, r) => a + r[0], 0), tout = L.reduce((a, r) => a + r[1], 0);
-    return { n: L.length, margin: tin ? (tin - tout) / tin : TARGET_MARGIN };
+  const parCache = {};
+  function par(len) { // median score for this many prompts, from the player model (same for everyone)
+    if (parCache[len]) return parCache[len];
+    const d = scoreCurve(len); let c = 0, k = 0; for (; k < d.length; k++) { c += d[k]; if (c >= 0.5) break; }
+    return (parCache[len] = k * 5);
   }
-  function settleRun(entry, payout) {
-    store.ledger = [...(store.ledger || []), [entry, payout]].slice(-200);
-    const { n, margin } = houseMargin(); let k = Math.max(HOUSE_CUT, store.houseK || 0);
-    if (n >= 3 && margin < TARGET_MARGIN) k *= 1.04;                       // players winning -> raise
-    else if (margin > TARGET_MARGIN + 0.12) k = Math.max(HOUSE_CUT, k * 0.99); // well ahead -> ease back
-    store.houseK = Math.min(3, k);
+  const marketPrice = len => Math.max(1, Math.ceil(par(len) / RANKED_RATE));
+  function rankedBoost() {
+    const rk = store.rk || {};
+    if ((rk.runs || 0) < WELCOME.length) return { x: WELCOME[rk.runs || 0], why: 'NEW PLAYER' };
+    if ((rk.lose || 0) >= COMEBACK_AFTER) return { x: COMEBACK, why: 'COMEBACK' };
+    return { x: 1, why: '' };
   }
-  function avgPerPrompt() {
-    const recent = cleanGames().slice(-40).flatMap(e => e.results.map(r => r.score || 0)).slice(-300);
-    return (AVG_PER_PROMPT * PRIOR_PROMPTS + recent.reduce((a, b) => a + b, 0)) / (PRIOR_PROMPTS + recent.length);
+  function coinsFor(score, ranked, len, boost) {
+    if (!ranked) return 0; const P = par(len);
+    return Math.floor((Math.min(score, P) / RANKED_RATE + Math.max(0, score - P) / RANKED_RATE * UPPER_RATE) * (boost || 1));
   }
-  const marketPrice = len => Math.max(1, Math.ceil((avgPerPrompt() * len / RANKED_RATE) * Math.max(HOUSE_CUT, store.houseK || 0)));
-  const coinsFor = (score, ranked) => (ranked ? Math.floor(score / RANKED_RATE) : 0);
+  function profitAt(len, boost) { let s = 0; const price = marketPrice(len); while (s < len * 100 && coinsFor(s, true, len, boost) <= price) s += 5; return s; }
   let coinImg = '';
   const coinTag = n => `<span class="coin">${coinImg ? `<img class="pix coin-ico" src="${coinImg}" alt="">` : ''}${Number(n).toLocaleString('en-US')}</span>`;
   const EPOCH = '2026-09-01'; // Daily Dive #1
@@ -231,7 +227,7 @@
   function newGame(mode, key) {
     const len = mode === 'ranked' ? rankedLen() : mode === 'daily' || mode === 'archive' ? PER_GAME : (LENGTHS.includes(store.settings.len) ? store.settings.len : 10);
     const ids = mode === 'daily' || mode === 'archive' ? dailyIds(key) : randomIds(mode === 'pack' ? key : null, len || 10);
-    return { mode, key, ids, len, ranked: mode === 'ranked' || undefined, price: mode === 'ranked' ? marketPrice(len) : undefined, idx: 0, results: [], score: 0, depth: 0, phase: 'answering', phaseEnd: Date.now() + ANSWER_MS, input: '', tries: [], startedAt: Date.now() };
+    return { mode, key, ids, len, ranked: mode === 'ranked' || undefined, price: mode === 'ranked' ? marketPrice(len) : undefined, boost: mode === 'ranked' ? rankedBoost().x : undefined, idx: 0, results: [], score: 0, depth: 0, phase: 'answering', phaseEnd: Date.now() + ANSWER_MS, input: '', tries: [], startedAt: Date.now() };
   }
   const curQ = () => BY_ID.get(G.ids[G.idx]);
 
@@ -366,10 +362,10 @@
   function finish(silent) {
     if (!lenOf(G)) G.ids = G.ids.slice(0, Math.max(1, G.results.length)); // endless: only the prompts actually played
     const cheated = G.results.some(r => r && r.cheat);
-    const earned = cheated ? 0 : coinsFor(G.score, G.ranked);
+    const earned = cheated ? 0 : coinsFor(G.score, G.ranked, G.len || 10, G.boost);
     store.coins = (store.coins ?? START_COINS) + earned;
-    if (G.ranked && !cheated) settleRun(G.price || 0, earned);
-    const entry = { coins: earned, ranked: G.ranked, price: G.price, cheated: cheated || undefined, mode: G.mode, key: G.key, len: lenOf(G), ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
+    if (G.ranked && !cheated) { const rk = store.rk || (store.rk = {}); rk.runs = (rk.runs || 0) + 1; rk.lose = earned > (G.price || 0) ? 0 : (rk.lose || 0) + 1; }
+    const entry = { coins: earned, ranked: G.ranked, price: G.price, boost: G.boost, cheated: cheated || undefined, mode: G.mode, key: G.key, len: lenOf(G), ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
     if (G.mode === 'daily') { entry.dayNo = dayIndex(G.key) + 1; store.daily[G.key] = entry; }
     if (G.mode === 'archive') { const a = store.archive[G.key] || { best: 0, plays: 0 }; a.plays++; a.best = Math.max(a.best, entry.score); store.archive[G.key] = a; entry.dayNo = dayIndex(G.key) + 1; }
     store.history.push(entry); if (store.history.length > 400) store.history.splice(0, store.history.length - 400);
@@ -1100,9 +1096,10 @@
   function renderCoins() {
     const c = store.coins ?? START_COINS, price = marketPrice(rankedLen());
     $$('.coin-bal').forEach(el => { el.innerHTML = coinTag(c); });
-    const pa = $('#pa-ranked'); if (pa) { pa.innerHTML = `RANKED · ${rankedLen()} PROMPTS · ${coinTag(price)}`; pa.classList.toggle('poor', c < price); }
+    const bo = rankedBoost(), tag = bo.x > 1 ? ` <span class="rk-boost">${bo.why} ×${bo.x}</span>` : '';
+    const pa = $('#pa-ranked'); if (pa) { pa.innerHTML = `RANKED · ${rankedLen()} PROMPTS · ${coinTag(price)}${tag}`; pa.classList.toggle('poor', c < price); }
     const rb = $('#btn-ranked');
-    if (rb) { const L = rankedLen(); rb.innerHTML = `RANKED · ${L} PROMPTS · ${coinTag(price)}`; rb.title = `Pays R$1 per ${RANKED_RATE} points. Score ${price * RANKED_RATE}+ to profit.`; rb.classList.toggle('poor', c < price); }
+    if (rb) { const L = rankedLen(); rb.innerHTML = `RANKED · ${L} PROMPTS · ${coinTag(price)}${tag}`; rb.title = `Score ${profitAt(L, bo.x)}+ to profit${bo.x > 1 ? ` (${bo.why} boost: payout ×${bo.x})` : ''}.`; rb.classList.toggle('poor', c < price); }
   }
   function renderLenPick() {
     const cur = LENGTHS.includes(store.settings.len) ? store.settings.len : 10;
