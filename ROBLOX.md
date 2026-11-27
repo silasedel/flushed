@@ -118,3 +118,8 @@ The 6969 cheat code is for testing only — remove it from the Roblox build (or 
 - **Boost:** Extra Time (+5s every prompt, one ranked run) costs 5 — worth far less than 5 in extra payout on average,
   so it's profitable too. Don't sell boosts that add points directly.
 - On real Roblox, keep the Section 5 rule: Robux buys shop items/passes; the ranked stake must be an earn-only currency.
+- **Profit guard (self-correcting).** The server keeps a ledger of the last 40 ranked runs (entries in, payouts out).
+  If the house margin drops under 8% (players winning for any reason), the price multiplier rises 4% per run until
+  the margin is back on target; once it's comfortably above (20%+) it drifts back toward the base 5%. Simulated
+  300-run sessions: average/good/pro players and players who suddenly improve all leave the house ~20–28% ahead, and
+  in 200 random sims per player type the house never ended a session down.

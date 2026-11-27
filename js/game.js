@@ -28,12 +28,28 @@
   // rises, if they get worse it falls. Price = average payout for that length + the house cut, so on average the house
   // always takes in more than it pays out. Web: this device's recent prompts blended with the model. Roblox: every
   // player's recent ranked prompts (DataStore), same formula.
-  const HOUSE_CUT = 1.05, PRIOR_PROMPTS = 40; // entry = average payout + 5%, rounded up
+  const HOUSE_CUT = 1.05, PRIOR_PROMPTS = 40; // base: entry = average payout + 5%, rounded up
+  // Profit guard: the house keeps a ledger of recent ranked runs (entries in, payouts out). If the house's margin over
+  // the last 40 runs drops below 8% (players are winning: new tricks, better players, lucky streak), the price multiplier
+  // steps up 4% per run until the house is back on target; when the margin is comfortably above target it drifts back
+  // down toward the base cut. So whatever players do, entries keep running ahead of payouts.
+  const TARGET_MARGIN = 0.08, LEDGER_N = 40;
+  function houseMargin() {
+    const L = (store.ledger || []).slice(-LEDGER_N); const tin = L.reduce((a, r) => a + r[0], 0), tout = L.reduce((a, r) => a + r[1], 0);
+    return { n: L.length, margin: tin ? (tin - tout) / tin : TARGET_MARGIN };
+  }
+  function settleRun(entry, payout) {
+    store.ledger = [...(store.ledger || []), [entry, payout]].slice(-200);
+    const { n, margin } = houseMargin(); let k = store.houseK || HOUSE_CUT;
+    if (n >= 3 && margin < TARGET_MARGIN) k *= 1.04;                       // players winning -> raise
+    else if (margin > TARGET_MARGIN + 0.12) k = Math.max(HOUSE_CUT, k * 0.99); // well ahead -> ease back
+    store.houseK = Math.min(3, k);
+  }
   function avgPerPrompt() {
     const recent = cleanGames().slice(-40).flatMap(e => e.results.map(r => r.score || 0)).slice(-300);
     return (AVG_PER_PROMPT * PRIOR_PROMPTS + recent.reduce((a, b) => a + b, 0)) / (PRIOR_PROMPTS + recent.length);
   }
-  const marketPrice = len => Math.max(1, Math.ceil((avgPerPrompt() * len / RANKED_RATE) * HOUSE_CUT));
+  const marketPrice = len => Math.max(1, Math.ceil((avgPerPrompt() * len / RANKED_RATE) * (store.houseK || HOUSE_CUT)));
   const coinsFor = (score, ranked) => (ranked ? Math.floor(score / RANKED_RATE) : 0);
   let coinImg = '';
   const coinTag = n => `<span class="coin">${coinImg ? `<img class="pix coin-ico" src="${coinImg}" alt="">` : ''}${Number(n).toLocaleString('en-US')}</span>`;
@@ -351,6 +367,7 @@
     const cheated = G.results.some(r => r && r.cheat);
     const earned = cheated ? 0 : coinsFor(G.score, G.ranked);
     store.coins = (store.coins ?? START_COINS) + earned;
+    if (G.ranked && !cheated) settleRun(G.price || 0, earned);
     const entry = { coins: earned, ranked: G.ranked, price: G.price, cheated: cheated || undefined, mode: G.mode, key: G.key, len: lenOf(G), ids: G.ids, results: G.ids.map((id, i) => G.results[i] || { id, answer: null, input: '', score: 0, tries: [], reason: 'surfaced' }), score: G.score, depth: G.depth, at: Date.now() };
     if (G.mode === 'daily') { entry.dayNo = dayIndex(G.key) + 1; store.daily[G.key] = entry; }
     if (G.mode === 'archive') { const a = store.archive[G.key] || { best: 0, plays: 0 }; a.plays++; a.best = Math.max(a.best, entry.score); store.archive[G.key] = a; entry.dayNo = dayIndex(G.key) + 1; }

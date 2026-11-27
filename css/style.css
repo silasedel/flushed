@@ -764,3 +764,9 @@ body[data-screen="results"] .robux-corner, body[data-screen="packs"] .robux-corn
 
 .fine-print { margin: 6px auto 0; max-width: 680px; font-family: var(--mono); font-size: .55rem; line-height: 1.35; letter-spacing: .03em; color: rgba(201,213,196,.5); text-align: center; }
 @media (max-height: 640px) { .fine-print { font-size: .5rem; margin-top: 4px; } }
+/* bottom menu: prompts + packs + shop + stats on one row */
+.title-bottom { width: min(calc(100% - 32px), 860px) !important; }
+.title-bar { flex-wrap: nowrap; gap: 8px; }
+.title-bar .tab-btn, .title-bar .tab-btn:last-child { padding: .7em 1em; letter-spacing: .14em; }
+.len-pick button { min-width: 2.6em; }
+@media (max-width: 860px) { .title-bar { flex-wrap: wrap; } }
