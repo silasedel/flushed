@@ -153,6 +153,8 @@
   function matchContained(q, input) {
     // place names are proper nouns: 'New Mexico' must not count as Mexico, so geography never uses phrase matching
     if (q.pack === 'geography') return null;
+    // letter prompts: 'polar bear' must not count for 'animal that starts with B' just because it contains 'bear'
+    if (/\b(starts?|starting|beginning|begins)\s+with\b/i.test(q.q)) return null;
     const n0 = norm(input); if (!n0 || !n0.includes(' ')) return null;
     const words = n0.split(' ');
     const forms = [n0, words.map(singular).join(' ')];
