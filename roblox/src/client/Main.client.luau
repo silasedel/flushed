@@ -13,6 +13,20 @@ local Match = require(Shared.Match) -- only for tier names/colors
 local remote = ReplicatedStorage:WaitForChild("Flushed")
 local player = Players.LocalPlayer
 
+-- FLUSHED is a full-screen single-player game: hide Roblox's player list and chat window so they don't cover
+-- the score and coins (coins and best score are shown by the game itself)
+local StarterGui = game:GetService("StarterGui")
+task.spawn(function()
+	for _ = 1, 10 do
+		local ok = pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+		end)
+		if ok then break end
+		task.wait(0.5)
+	end
+end)
+
 ---------------------------------------------------------------- look
 local TITLE_FONT = Enum.Font.Arcade
 local BODY_FONT = Enum.Font.GothamBold
@@ -32,8 +46,9 @@ local function make(class, props, children)
 	if props and props.Parent then o.Parent = props.Parent end
 	return o
 end
-local function stroke(o, thickness, color)
-	make("UIStroke", { Thickness = thickness or 2, Color = color or Color3.new(0, 0, 0), ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual, Parent = o })
+-- labels get a text outline (Contextual); buttons and boxes get a border (Border), not an outline around their letters
+local function stroke(o, thickness, color, border)
+	make("UIStroke", { Thickness = thickness or 2, Color = color or Color3.new(0, 0, 0), ApplyStrokeMode = border and Enum.ApplyStrokeMode.Border or Enum.ApplyStrokeMode.Contextual, Parent = o })
 	return o
 end
 local function maxText(o, px) make("UITextSizeConstraint", { MaxTextSize = px, Parent = o }); return o end
@@ -53,7 +68,7 @@ local function button(props)
 		Text = props.Text or "", Size = props.Size, Position = props.Position, AnchorPoint = props.AnchorPoint or Vector2.zero,
 		Parent = props.Parent, LayoutOrder = props.LayoutOrder or 0, ZIndex = props.ZIndex or 1,
 	})
-	stroke(b, props.Stroke or 3, props.StrokeColor or INK)
+	stroke(b, props.Stroke or 3, props.StrokeColor or INK, true)
 	maxText(b, props.Max or 26)
 	make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4), Parent = b })
 	return b
@@ -63,7 +78,7 @@ local function commas(n)
 	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
 	return (out:gsub("^,", ""))
 end
-local function coinText(n) return "🪙" .. commas(n) end
+local function coinText(n) return "💰" .. commas(n) end
 
 ---------------------------------------------------------------- sound
 local sounds = {}
@@ -102,11 +117,11 @@ for _, s in Config.ROBUX_PASSES do table.insert(ALL_ITEMS, s) end
 -- coins in the corner
 local coinCorner = label({ Parent = gui, Size = UDim2.new(0, 170, 0, 36), Position = UDim2.new(1, -12, 0, 12), AnchorPoint = Vector2.new(1, 0), Max = 22, ZIndex = 5 })
 coinCorner.BackgroundColor3 = PANEL; coinCorner.BackgroundTransparency = 0.15
-stroke(coinCorner, 2, GOLD)
+stroke(coinCorner, 2, GOLD, true)
 
 toastLabel = label({ Parent = gui, Size = UDim2.new(0.6, 0, 0, 44), Position = UDim2.new(0.5, 0, 1, -24), AnchorPoint = Vector2.new(0.5, 1), Max = 20, ZIndex = 50 })
 toastLabel.BackgroundColor3 = PANEL; toastLabel.BackgroundTransparency = 0.05; toastLabel.Visible = false
-stroke(toastLabel, 2, INK)
+stroke(toastLabel, 2, INK, true)
 
 local function screen(name)
 	local f = make("Frame", { Name = name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = gui })
@@ -147,7 +162,9 @@ end
 
 local flushBtn = button({ Parent = T, Text = "▼  FLUSH  ▼", Font = TITLE_FONT, Size = UDim2.new(0.7, 0, 0.11, 0), Position = UDim2.fromScale(0.5, 0.56), AnchorPoint = Vector2.new(0.5, 0), Color = Color3.fromRGB(16, 40, 22), StrokeColor = GREEN, Stroke = 4, Max = 48, TextColor3 = GREEN })
 local rankedBtn = button({ Parent = T, Text = "RANKED", Size = UDim2.new(0.7, 0, 0.075, 0), Position = UDim2.fromScale(0.5, 0.69), AnchorPoint = Vector2.new(0.5, 0), Color = Color3.fromRGB(40, 30, 6), StrokeColor = GOLD, Max = 24, TextColor3 = Color3.fromHex("#ffe27a") })
-local fine = label({ Parent = T, Text = "", Size = UDim2.new(0.8, 0, 0.06, 0), Position = UDim2.fromScale(0.5, 0.77), AnchorPoint = Vector2.new(0.5, 0), Max = 12, TextColor3 = DIM, Font = Enum.Font.Gotham })
+local fine = label({ Parent = T, Text = "", Size = UDim2.new(0.86, 0, 0.065, 0), Position = UDim2.fromScale(0.5, 0.765), AnchorPoint = Vector2.new(0.5, 0), Max = 14, TextColor3 = DIM, Font = Enum.Font.GothamMedium })
+fine.BackgroundColor3 = PANEL; fine.BackgroundTransparency = 0.2 -- readable on the light bowl water
+make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 3), PaddingBottom = UDim.new(0, 3), Parent = fine })
 local row2 = make("Frame", { Parent = T, BackgroundTransparency = 1, Size = UDim2.new(0.7, 0, 0.065, 0), Position = UDim2.fromScale(0.5, 0.85), AnchorPoint = Vector2.new(0.5, 0) }, {
 	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10) }),
 })
@@ -169,7 +186,7 @@ local function renderTitle()
 	local tag = b.x > 1 and string.format('  <font color="#7dff6a">%s ×%s</font>', b.why, tostring(b.x)) or ""
 	rankedBtn.Text = string.format("RANKED · %d PROMPTS · %s%s", L, coinText(price), tag)
 	rankedBtn.BackgroundTransparency = profile.coins < price and 0.5 or 0
-	fine.Text = string.format("Ranked: entry is spent when the run starts. Same price for everyone. Pays 1 coin per 5 points up to the typical score, then 1 per 25 above it. Score %d+ to profit. Boosts: first 3 ranked runs pay ×1.3/×1.2/×1.1; after 3 losses in a row your next run pays ×1.3. Coins are earned in-game only and can't be bought.", profile.profitAt[key] or 0)
+	fine.Text = string.format("Ranked: entry spent at start · same price for everyone · score %d+ to profit\nBoosts show on the button · coins are earned in-game, never bought", profile.profitAt[key] or 0)
 	local d = itemById(profile.equip.duck or "")
 	local t = itemById(profile.equip.toilet or "")
 	skinLabel.Text = (d and d.name or "Classic Duck") .. "  ·  " .. (t and t.name or "Classic Toilet")
@@ -194,7 +211,7 @@ local box = make("TextBox", {
 	Font = BODY_FONT, TextColor3 = INK, PlaceholderText = "type an answer and press Enter", PlaceholderColor3 = Color3.fromRGB(120, 140, 130),
 	Text = "", TextScaled = true, ClearTextOnFocus = false,
 })
-stroke(box, 3, INK); maxText(box, 32)
+stroke(box, 3, INK, true); maxText(box, 32)
 local feedback = label({ Parent = P, Text = "", Size = UDim2.new(1, 0, 0.06, 0), Position = UDim2.fromScale(0, 0.49), Max = 22 })
 stroke(feedback, 2)
 local endBtn = button({ Parent = P, Text = "END RUN", Size = UDim2.new(0.25, 0, 0.06, 0), Position = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(1, 1), Max = 18 })
@@ -209,7 +226,7 @@ stroke(tierLabel, 3)
 local answerLabel = label({ Parent = reveal, Text = "", Size = UDim2.new(1, -20, 0.17, 0), Position = UDim2.new(0, 10, 0.34, 0), Max = 26 })
 local blurbLabel = label({ Parent = reveal, Text = "", Size = UDim2.new(1, -20, 0.12, 0), Position = UDim2.new(0, 10, 0.51, 0), Max = 18, TextColor3 = DIM, Font = Enum.Font.Gotham })
 local othersLabel = label({ Parent = reveal, Text = "", Size = UDim2.new(1, -20, 0.14, 0), Position = UDim2.new(0, 10, 0.64, 0), Max = 16, TextColor3 = DIM, Font = Enum.Font.Gotham })
-local nextBtn = button({ Parent = reveal, Text = "NEXT ▶", Size = UDim2.new(0.3, 0, 0.17, 0), Position = UDim2.new(0.5, 0, 0.97, 0), AnchorPoint = Vector2.new(0.5, 1), Max = 22, StrokeColor = GREEN, TextColor3 = GREEN })
+local nextBtn = button({ Parent = reveal, Text = "NEXT ▶", Size = UDim2.new(0.3, 0, 0.17, 0), Position = UDim2.new(0.5, 0, 0.97, 0), AnchorPoint = Vector2.new(0.5, 1), Max = 22, Color = Color3.fromRGB(40, 120, 50), StrokeColor = GREEN, TextColor3 = INK })
 
 local game_ = nil -- {ranked, total, deadline, seconds, phase}
 local pendingSuggest = nil
