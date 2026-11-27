@@ -10,3 +10,10 @@ fs.writeFileSync(path.join(__dirname, '..', 'data', 'questions.bundle.js'), out.
 console.log(`bundled ${files.length} files`);
 
 require('./families.js'); // look-alike prompt families for the picker
+// Cache-bust: give every local script/stylesheet in index.html a fresh ?v= so browsers load the new version right away.
+{
+  const idx = path.join(__dirname, '..', 'index.html'), v = Date.now().toString(36);
+  let html = fs.readFileSync(idx, 'utf8');
+  html = html.replace(/((?:src|href)="(?:js|css|data)\/[^"?]+\.(?:js|css))(\?v=[^"]*)?"/g, `$1?v=${v}"`);
+  fs.writeFileSync(idx, html);
+}

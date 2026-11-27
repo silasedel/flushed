@@ -18,7 +18,7 @@
   // ---------- zones ----------
   const WATER = [
     [0, '#6fb3bf'], [120, '#4f8f9b'], [200, '#3f6b74'], [500, '#34555b'], [1000, '#2b3f31'],
-    [2500, '#203022'], [4000, '#25183a'], [5000, '#1b1130'], [6000, '#200a26'], [7200, '#15041a'],
+    [2400, '#203022'], [3600, '#25183a'], [4300, '#1b1130'], [4600, '#200a26'], [5800, '#15041a'],
   ].map(([m, h]) => [m, hex(h)]);
   function waterColor(m) {
     if (m <= WATER[0][0]) return WATER[0][1];
@@ -27,14 +27,17 @@
     }
     return WATER[WATER.length - 1][1];
   }
+  // Zone depths are tuned to score: in a 7-prompt game ~400 pts reaches the Rat Kingdom, ~500 the Brainrot Core,
+  // and past ~600 it goes full rainbow insanity (and keeps escalating).
+  const Z_RAT = 3600, Z_CORE = 4600, Z_MAD = 5600;
   const ZONES = [
     { name: 'Bowl', from: 0, to: 200 },
     { name: 'Pipes', from: 200, to: 1000 },
-    { name: 'Sewer', from: 1000, to: 4000 },
-    { name: 'Rat Kingdom', from: 4000, to: 6000 },
-    { name: 'Brainrot Core', from: 6000, to: 99999 },
+    { name: 'Sewer', from: 1000, to: Z_RAT },
+    { name: 'Rat Kingdom', from: Z_RAT, to: Z_CORE },
+    { name: 'Brainrot Core', from: Z_CORE, to: 99999 },
   ];
-  const zoneIndex = m => m < 200 ? 0 : m < 1000 ? 1 : m < 4000 ? 2 : m < 6000 ? 3 : 4;
+  const zoneIndex = m => m < 200 ? 0 : m < 1000 ? 1 : m < Z_RAT ? 2 : m < Z_CORE ? 3 : 4;
   // The shrimp's 0 m sits OFF meters below the drawn surface so the dive screen starts underwater.
   let OFF = 275; const dz = m => m - OFF;
 
@@ -1675,11 +1678,11 @@
       const y = ((hash(i * 7) * O.H - camPx + O.t * sp) % O.H + O.H) % O.H;
       const m = O.topM + y / O.ppm; if (m < 4) continue;
       const d = dz(m), deep = d > 1000;
-      if (d > 6000 && i % 2 === 0) { // confetti
+      if (d > Z_CORE && i % 2 === 0) { // confetti
         ctx.fillStyle = ['#ff3fb4', '#7dff6a', '#4ad0ff', '#ffe14a', '#c58bff'][i % 5];
         ctx.fillRect(Math.round(x), Math.round(y), (i + Math.floor(O.t * 3)) % 2 ? 2 : 1, (i + Math.floor(O.t * 3)) % 2 ? 1 : 2); continue;
       }
-      ctx.fillStyle = deep ? (i % 9 === 0 ? (d > 4000 ? 'rgba(255,110,200,0.6)' : 'rgba(125,255,106,0.55)') : 'rgba(170,210,170,0.28)') : 'rgba(230,250,255,0.35)';
+      ctx.fillStyle = deep ? (i % 9 === 0 ? (d > Z_RAT ? 'rgba(255,110,200,0.6)' : 'rgba(125,255,106,0.55)') : 'rgba(170,210,170,0.28)') : 'rgba(230,250,255,0.35)';
       ctx.fillRect(Math.round(x), Math.round(y), 1, 1);
     }
   }
@@ -1750,7 +1753,7 @@
           const w = BW - 2, h = BH - 2;
           let x = c * BW - off;
           if (side) x = W - x - w;
-          const zc = wallColors(d);
+          const zc = wallColors(d, (hash(s + 99) - 0.5) * 320); // per-brick jitter = soft, brick-by-brick blend
           ctx.fillStyle = zc[0]; ctx.fillRect(x, yb, w, h);
           ctx.fillStyle = zc[1]; ctx.fillRect(x, yb, w, 1); ctx.fillRect(x, yb, 1, h);
           ctx.fillStyle = zc[2]; ctx.fillRect(x + 1, yb + h - 1, w - 1, 1); ctx.fillRect(x + w - 1, yb + 1, 1, h - 1);
@@ -1816,8 +1819,8 @@
     const ppm = O.ppm, W = O.W, STEP = 70, kick = beatPulse();
     const top = dz(O.topM) - 60, bot = dz(O.topM + O.H / ppm) + 60;
     for (let L = Math.max(SEWER_TOP + 150, Math.floor(top / STEP) * STEP); L < bot; L += STEP) {
-      const s = L * 7 + 13, deepness = clamp((L - 4000) / 5000, 0, 1);
-      const chance = L < 4000 ? 0.16 : L < 6000 ? 0.3 : 0.42 + 0.33 * deepness; // gets busier the deeper you go
+      const s = L * 7 + 13, deepness = clamp((L - Z_CORE) / 2600, 0, 1.4); // keeps climbing past 1 = more insane
+      const chance = L < Z_RAT ? 0.16 : L < Z_CORE ? 0.3 : Math.min(0.95, 0.42 + 0.38 * deepness); // gets busier the deeper you go
       if (hash(s) > chance) continue;
       const side = hash(s + 1) > 0.5 ? 1 : 0, y = Math.round((L + OFF - O.topM) * ppm);
       const edge = sewerW(L, side), len = 30 + Math.floor(hash(s + 2) * 3) * 6, zc = wallColors(L);
@@ -1829,10 +1832,10 @@
       ctx.fillStyle = zc[3]; for (let bx = x0 + 6 + (side ? 0 : 3); bx < x0 + len; bx += 9) ctx.fillRect(bx, y + 1, 1, 2);
       const mid = side ? x0 + Math.round(len * 0.4) : x0 + Math.round(len * 0.6), face = side === 0; // things face the middle of the tunnel
       const kind = hash(s + 3);
-      if (L < 4000) { // sewer: a mouse peeking out, or a roach
+      if (L < Z_RAT) { // sewer: a mouse peeking out, or a roach
         if (kind < 0.6) drawSprite(ctx, 'mouse0', mid - 15, y - sprite('mouse0').h + 1, side === 1);
         else drawSprite(ctx, 'roach', mid - 11, y - sprite('roach').h + 2, side === 1);
-      } else if (L < 6000) { // rat kingdom: royalty and riches
+      } else if (L < Z_CORE) { // rat kingdom: royalty and riches
         if (kind < 0.45) drawSprite(ctx, 'crownMouse', mid - 15, y - sprite('crownMouse').h + 1, side === 1);
         else if (kind < 0.75) { glow(ctx, mid, y - 6, 10, [255, 213, 74], 0.14); drawSprite(ctx, 'cheese', mid - 11, y - sprite('cheese').h + 1, side === 1); }
         else { drawSprite(ctx, 'coin', mid - 8, y - 11); drawSprite(ctx, 'coin', mid - 2, y - 11); drawSprite(ctx, 'coin', mid - 5, y - 19); }
@@ -1940,14 +1943,34 @@
   }
 
   // wall colours by depth: [face, highlight, shadow, mortar, drip]
-  function wallColors(m) {
-    if (m > 7000) { // past the core it gets unhinged: rainbow bricks that pulse with the beat
-      const h = Math.floor((m / 6 + O.t * 40) % 360), l = 18 + Math.round(beatPulse() * 8);
-      return [`hsl(${h},55%,${l}%)`, `hsl(${h},70%,${l + 14}%)`, `hsl(${h},50%,${l - 8}%)`, `hsl(${h},40%,${Math.max(4, l - 12)}%)`, `hsla(${(h + 180) % 360},100%,65%,0.7)`];
-    }
-    if (m < 4000) return ['#2e3d2d', '#43573f', '#1b241a', '#151d15', 'rgba(125,255,106,0.55)'];
-    if (m < 6000) return ['#2f2244', '#43325f', '#1b1229', '#140d1f', 'rgba(255,213,74,0.6)'];
-    return ['#3a1236', '#56204f', '#1e081c', '#16061a', 'rgba(255,63,180,0.65)'];
+  // Brick colors blend from zone to zone. Each brick passes a little random jitter, so the switch from
+  // sewer green to rat-kingdom purple to core magenta happens brick by brick over a stretch, not on a line.
+  // Past Z_MAD the bricks cycle the rainbow on the beat, faster and brighter the deeper you go.
+  const WALL = {
+    sewer: [[46, 61, 45], [67, 87, 63], [27, 36, 26], [21, 29, 21], [125, 255, 106]],
+    rat:   [[47, 34, 68], [67, 50, 95], [27, 18, 41], [20, 13, 31], [255, 213, 74]],
+    core:  [[58, 18, 54], [86, 32, 79], [30, 8, 28], [22, 6, 26], [255, 63, 180]],
+  };
+  function hsl2rgb(h, s, l) {
+    s /= 100; l /= 100; const k = n => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+    const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+    return [f(0) * 255, f(8) * 255, f(4) * 255];
+  }
+  function madWall(m) {
+    const ins = clamp((m - Z_MAD) / 1500, 0, 2.5); // 0 at ~600 pts, climbing as you go deeper
+    const h = (m / 6 + O.t * (40 + ins * 70)) % 360, l = 18 + beatPulse() * (8 + ins * 6);
+    return [hsl2rgb(h, 55, l), hsl2rgb(h, 70, l + 14), hsl2rgb(h, 50, Math.max(4, l - 8)), hsl2rgb(h, 40, Math.max(4, l - 12)), hsl2rgb((h + 180) % 360, 100, 65)];
+  }
+  function wallColors(m, jitter = 0) {
+    m += jitter;
+    const band = 260, mixP = (A, B, q) => A.map((c, i) => mix(c, B[i], q));
+    let P;
+    if (m < Z_RAT) P = mixP(WALL.sewer, WALL.rat, smooth(Z_RAT - band, Z_RAT + band, m));
+    else if (m < Z_CORE) P = mixP(WALL.rat, WALL.core, smooth(Z_CORE - band, Z_CORE + band, m));
+    else P = WALL.core;
+    if (m < Z_RAT + band && m >= Z_RAT) P = mixP(WALL.sewer, WALL.rat, smooth(Z_RAT - band, Z_RAT + band, m));
+    if (m > Z_MAD - band) P = mixP(P, madWall(m), smooth(Z_MAD - band, Z_MAD + band, m));
+    return [rgb(P[0]), rgb(P[1]), rgb(P[2]), rgb(P[3]), rgb(P[4], 0.6)];
   }
 
   function drawLurker(ctx, ySurf) {

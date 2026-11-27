@@ -494,11 +494,11 @@
 
   // Depth labels drifting past on either side (zone names left, sea-life notes right).
   const DEPTH_LABELS = [
-    [0, 'l', 'the bowl'], [200, 'l', 'the pipes'], [1000, 'l', 'the sewer'], [4000, 'l', 'the rat kingdom'], [6000, 'l', 'the brainrot core'],
+    [0, 'l', 'the bowl'], [200, 'l', 'the pipes'], [1000, 'l', 'the sewer'], [3600, 'l', 'the rat kingdom'], [4600, 'l', 'the brainrot core'], [5600, 'l', 'it gets unhinged'],
     [60, 'r', 'last chance to unflush'], [150, 'l', 'lost AirPod spotted'], [260, 'r', 'someone flushed a goldfish'], [420, 'l', 'the smell intensifies'],
     [600, 'r', 'a sock. just one sock.'], [850, 'l', 'toothbrush graveyard'], [1150, 'r', 'gator sighting (unconfirmed)'], [1500, 'l', 'you can hear Ohio from here'],
-    [2000, 'r', 'fatberg the size of a bus'], [2600, 'l', 'rats doing a TikTok dance'], [3200, 'r', 'the wifi is surprisingly good'], [3800, 'l', 'abandoned rubber duck colony'],
-    [4300, 'r', 'rat with a crown'], [4900, 'l', 'the rat king is watching'], [5500, 'r', 'skill issue detected'], [6300, 'l', 'skibidi levels critical'], [6900, 'r', 'peak brainrot ahead'],
+    [2000, 'r', 'fatberg the size of a bus'], [2600, 'l', 'rats doing a TikTok dance'], [3200, 'r', 'the wifi is surprisingly good'], [3300, 'l', 'abandoned rubber duck colony'],
+    [3900, 'r', 'rat with a crown'], [4300, 'r', 'the rat king is watching'], [5000, 'r', 'skill issue detected'], [6200, 'l', 'skibidi levels critical'], [6800, 'r', 'peak brainrot ahead'],
     [7400, 'l', 'the rats have a DJ now'], [8000, 'r', 'it only gets worse from here'], [8800, 'l', 'ohio sends its regards'], [9600, 'r', 'the bass is load-bearing'],
     [10500, 'l', 'no one has ever come back'], [11500, 'r', 'certified brainrot bedrock'], [13000, 'l', 'you are the brainrot now'],
   ];
