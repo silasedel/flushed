@@ -76,8 +76,19 @@
   }
 
   // Returns {answer} on success, or null.
-  function match(q, input) {
+  // "Name a word that goes after 'side'": accept "flip", "side flip" and "sideflip" alike.
+  const ANCHOR = /\b(?:goes|go|comes|come|follows?|precedes?)\s+(after|before)\s+['"‘“]([^'"’”]+)['"’”]/i;
+  function anchorAlts(q, n) {
+    const m = ANCHOR.exec(q.q); if (!m) return [];
+    const a = norm(m[2]); if (!a) return [];
+    const flat = n.replace(/ /g, ''), af = a.replace(/ /g, ''), out = [];
+    if (m[1].toLowerCase() === 'after') { if (flat.startsWith(af) && flat.length > af.length) out.push(n.startsWith(a + ' ') ? n.slice(a.length + 1) : flat.slice(af.length)); out.push(a + ' ' + n); }
+    else { if (flat.endsWith(af) && flat.length > af.length) out.push(n.endsWith(' ' + a) ? n.slice(0, -a.length - 1) : flat.slice(0, -af.length)); out.push(n + ' ' + a); }
+    return out.filter(x => x && x !== n);
+  }
+  function match(q, input, _alt) {
     const n = norm(input); if (!n) return null;
+    if (!_alt) { const direct = match(q, input, true); if (direct) return direct; for (const alt of anchorAlts(q, n)) { const r = match(q, alt, true); if (r) return r; } return null; }
     const { index, keys } = parseAnswers(q);
     for (const v of variants(n)) { const a = index.get(v); if (a) return { answer: a, exact: true, label: q._parsed.label.get(v) }; }
     // fuzzy: allow small typos on longer inputs; reject if ambiguous between different answers
@@ -99,7 +110,7 @@
   function matchExact(q, input) {
     const n = norm(input); if (!n) return null;
     const { index } = parseAnswers(q);
-    for (const v of variants(n)) { const a = index.get(v); if (a) return { answer: a, exact: true, label: q._parsed.label.get(v) }; }
+    for (const cand of [n, ...anchorAlts(q, n)]) for (const v of variants(cand)) { const a = index.get(v); if (a) return { answer: a, exact: true, label: q._parsed.label.get(v) }; }
     return null;
   }
 
