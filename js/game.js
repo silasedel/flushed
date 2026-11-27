@@ -46,6 +46,8 @@
   const MIX = ['easy', 'easy', 'easy', 'easy', 'easy', 'easy', 'easy']; // Daily & Unlimited: only questions ~90% of players can answer
   const PACK_MIX = ['easy', 'easy', 'easy', 'medium', 'medium', 'medium', 'hard'];
   // abstract "Name something that…" prompts: fun in small doses, at most one per dive
+  // Brainrot prompts (memes, slang, skibidi energy): a surprise, not the main course.
+  const isBrainrot = q => q.cat === 'Brainrot' || /\b(brain ?rot|gen alpha|meme|skibidi|rizz|sigma|aura|npc|ohio|gyatt|fanum)\b/i.test(q.q);
   const isVague = q => /^(name|give) (something|anything|a thing|an object|an item)\b/i.test(q.q);
   const FALLBACK = { easy: ['easy', 'medium', 'hard'], medium: ['medium', 'easy', 'hard'], hard: ['hard', 'medium', 'easy'] };
   const BY_ID = new Map(QS.map(q => [q.id, q]));
@@ -74,7 +76,8 @@
   }
   // Daily & Unlimited draw each prompt's topic at random with these weights: thinking topics lead,
   // entertainment trails, and any dive can come out science-heavy, geography-heavy or mixed.
-  const WEIGHTS = { science: 3, geography: 2.6, general: 2, language: 1.4, fun: 1.3, sports: 0.9, gaming: 0.9, pop: 0.9, music: 0.6, movies: 0.45 };
+  // Mostly brainy: science, geography and history lead; entertainment is a sprinkle.
+  const WEIGHTS = { science: 4, geography: 3.2, general: 2.6, language: 1.3, fun: 0.8, sports: 0.6, gaming: 0.55, pop: 0.45, music: 0.35, movies: 0.3 };
   function pickPack(rand, exclude) {
     const opts = Object.entries(WEIGHTS).filter(([p]) => !exclude.has(p));
     let x = rand() * opts.reduce((n, [, w]) => n + w, 0);
@@ -135,13 +138,15 @@
     const recentG = new Set(store.recentGroups || []); // groups served in your last few games
     const inGame = new Set(exclude.map(id => BY_ID.get(id)).filter(Boolean).map(groupOf).slice(-12));
     const allowVague = Math.random() < 1 / 3; // "Name something that…" only in about a third of games
+    const allowBrainrot = Math.random() < 0.4; // about 40% of games get one brainrot prompt
     const allowFamous = Math.random() < 0.35; // "Name a famous…" prompts are fuzzy (what counts as famous?), so keep them rare
     // strictness 2: new group in this game AND not played recently; 1: new group in this game; 0: anything
     const ok = (x, strict) => !picks.includes(x) && (pack || casualOK(x))
       && (strict < 1 || (!picks.some(p => groupOf(p) === groupOf(x)) && !inGame.has(groupOf(x))))
       && (strict < 2 || !recentG.has(groupOf(x)))
       && (pack || !(isVague(x) && (!allowVague || picks.some(isVague))))
-      && (pack || !(isFamous(x) && (!allowFamous || picks.some(isFamous))));
+      && (pack || !(isFamous(x) && (!allowFamous || picks.some(isFamous))))
+      && (pack || !(isBrainrot(x) && (!allowBrainrot || picks.some(isBrainrot))));
     for (const strict of [2, 1, 0]) {
       if (pack) {
         for (const want of PACK_MIX) { if (picks.length >= n) break; for (const w of FALLBACK[want]) { const q = sh.find(x => x.diff === w && ok(x, strict)); if (q) { picks.push(q); break; } } }
@@ -154,6 +159,10 @@
       }
       for (const q of sh) { if (picks.length >= n) break; if (ok(q, strict)) picks.push(q); }
       if (picks.length >= n) break;
+    }
+    if (!pack && allowBrainrot && !picks.some(isBrainrot) && picks.length) {
+      const br = sh.find(x => isBrainrot(x) && casualOK(x) && !picks.includes(x));
+      if (br) picks[picks.length - 1] = br;
     }
     // order them so the same topic never comes twice in a row (when there's any way around it)
     // (always take next from the topic with the most left that isn't the one just played)
