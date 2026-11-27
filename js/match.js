@@ -150,12 +150,16 @@
   // Guardrails: the contained answer is >= 4 letters, sits on word boundaries, the extra words are few,
   // and only one distinct answer is contained (so typing several answers at once doesn't work).
   const NAMING_WORDS = new Set(['state', 'city', 'county', 'island', 'islands', 'river', 'lake', 'mountain', 'mountains', 'street', 'avenue', 'park', 'records', 'studios', 'games', 'entertainment', 'inc', 'corp', 'company', 'co', 'fc', 'united', 'jr', 'sr', 'ii', 'iii', 'iv', 'tech', 'district', 'province', 'territory', 'bay', 'beach', 'airport', 'station', 'stadium', 'arena', 'museum', 'hospital', 'church', 'cathedral', 'bridge', 'tower', 'mall']);
+  // Names that contain an answer but are NOT that thing ("horseshoe crab" isn't a crab). Only blocks phrase matching:
+  // a prompt that lists one of these as its own answer still accepts it.
+  const MISNOMERS = new Set(['horseshoe crab', 'guinea pig', 'koala bear', 'sea cucumber', 'sea lion', 'sea horse', 'prairie dog', 'flying fox', 'electric eel', 'killer whale', 'sea anemone', 'mud puppy', 'flying lemur', 'red panda', 'bearcat', 'king cobra', 'velvet ant', 'firefly', 'dragonfly', 'jelly fish', 'star fish', 'cray fish', 'silver fish', 'shell fish', 'cuttle fish', 'peanut', 'coconut', 'strawberry', 'pineapple']);
   function matchContained(q, input) {
     // place names are proper nouns: 'New Mexico' must not count as Mexico, so geography never uses phrase matching
     if (q.pack === 'geography') return null;
     // letter prompts: 'polar bear' must not count for 'animal that starts with B' just because it contains 'bear'
     if (/\b(starts?|starting|beginning|begins)\s+with\b/i.test(q.q)) return null;
     const n0 = norm(input); if (!n0 || !n0.includes(' ')) return null;
+    if (MISNOMERS.has(n0) || MISNOMERS.has(n0.split(' ').map(singular).join(' '))) return null;
     const words = n0.split(' ');
     const forms = [n0, words.map(singular).join(' ')];
     const { keys } = parseAnswers(q);
@@ -163,12 +167,22 @@
     for (const [k, ans] of keys) {
       if (k.length < 3) continue;
       if (k === n0) continue;
-      const re = new RegExp('(^| )' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '( |$)');
-      if (!forms.some(f => re.test(f))) continue;
+      const esc = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const re = new RegExp('(^| )' + esc + '( |$)');
+      const f = forms.find(x => re.test(x)); if (!f) continue;
       const extra = words.length - k.split(' ').length;
       // "Penn State", "Kansas City", "Georgia Tech": a naming word after the answer makes it a different thing
-      const after = forms[0].split(new RegExp('(?:^| )' + k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?: |$)'))[1] || '';
-      if (after && after.split(' ').some(w => NAMING_WORDS.has(w))) continue;
+      // (checked on the form that matched, so the singular "kansa city chief" can't sneak past)
+      const parts = f.split(new RegExp('(?:^| )' + esc + '(?: |$)')), before = parts[0] || '', after = parts[1] || '';
+      if (after && after.split(' ').some(w => NAMING_WORDS.has(w) || NAMING_WORDS.has(w + 's'))) continue;
+      // short alias of a longer name ("Golem" for Iron Golem, "Samuel" for Asante Samuel): the extra words must come
+      // from that name, otherwise they name a different thing ("snow golem", "Deebo Samuel", "lightning rod")
+      const nameWords = norm(ans.name).split(' ').map(singular);
+      const kWords = k.split(' ').map(singular);
+      if (nameWords.length > kWords.length && kWords.every(w => nameWords.includes(w))) {
+        const extras = (before + ' ' + after).split(' ').filter(Boolean).map(singular);
+        if (extras.some(w => !nameWords.includes(w))) continue;
+      }
       if (extra < 1 || extra > 4 || (k.length < 4 && extra > 2)) continue;
       const cur = hits.get(ans); if (!cur || k.length > cur.length) hits.set(ans, k);
     }
