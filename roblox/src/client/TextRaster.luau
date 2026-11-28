@@ -20,7 +20,7 @@ end
 
 -- characters the fonts don't have (the browser borrows them from a system font): simple shapes in em units
 local SHAPES = {
-	[0x25BC] = { 0.6, { { 0.08, 0.62, 0.52, 0.62, 0.3, 0.2 } } }, -- ▼
+	[0x25BC] = { 0.6, { { 0.0, 0.66, 0.6, 0.66, 0.3, 0.12 } } }, -- ▼
 	[0x25B2] = { 0.6, { { 0.08, 0.2, 0.3, 0.62, 0.52, 0.2 } } }, -- ▲
 	[0x25B8] = { 0.6, { { 0.14, 0.58, 0.46, 0.4, 0.14, 0.22 } } }, -- ▸
 	[0x25C2] = { 0.6, { { 0.46, 0.58, 0.46, 0.22, 0.14, 0.4 } } }, -- ◂
@@ -48,7 +48,9 @@ function TextRaster.layout(text, opts)
 		local a = glyphOf(font, cp)
 		return a * unit + sp
 	end
-	local lineH = opts.lineHeight or (font.asc + font.desc) * unit
+	-- line-height: normal = rounded ascent + rounded descent (as Chrome does)
+	local ascPx, descPx = math.floor(font.asc * unit + 0.5), math.floor(font.desc * unit + 0.5)
+	local lineH = opts.lineHeight or (ascPx + descPx)
 	local lines = {}
 	local function measure(s)
 		local w = 0
@@ -88,8 +90,8 @@ function TextRaster.layout(text, opts)
 	end
 	local w = 0
 	for _, l in lines do w = math.max(w, l[2]) end
-	local contentH = (font.asc + font.desc) * unit
-	return { lines = lines, w = w, h = lineH * #lines, lineH = lineH, ascent = font.asc * unit, halfLeading = (lineH - contentH) / 2, font = font, unit = unit, spacing = sp }
+	local contentH = ascPx + descPx
+	return { lines = lines, w = w, h = lineH * #lines, lineH = lineH, ascent = ascPx, halfLeading = (lineH - contentH) / 2, font = font, unit = unit, spacing = sp }
 end
 
 ---------------------------------------------------------------- rasterizing
