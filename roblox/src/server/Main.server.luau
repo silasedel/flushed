@@ -15,9 +15,15 @@ local Profiles = require(script.Parent.Profiles)
 local remote = Instance.new("RemoteFunction")
 remote.Name = "Flushed"
 remote.Parent = ReplicatedStorage
+local push = Instance.new("RemoteEvent") -- server -> client updates (a Robux purchase went through, etc.)
+push.Name = "FlushedPush"
+push.Parent = ReplicatedStorage
 
 local games = {} -- [Player] = current game
 local lastCall = {} -- [Player] = os.clock() of the last request (simple spam guard)
+local lastGame = {} -- [Player] = the finished game (for "show every answer" on the results page)
+local pendingBuy = {} -- [UserId] = shop item id the player is buying with Robux
+local TIER_DEPTH = { [100] = 1000, [85] = 750, [60] = 450, [30] = 200, [10] = 30 }
 
 ---------------------------------------------------------------- helpers
 local function shopItem(id)
@@ -37,6 +43,8 @@ local function leaderstats(player, p)
 	ls.Best.Value = p.stats.best
 end
 
+local bankAnswers = 0
+for _, q in Bank.all do bankAnswers += #(q.a or {}) end
 local function packList(p)
 	local out = {}
 	for _, pk in Config.PACKS do
@@ -55,8 +63,13 @@ local function profileView(player)
 	return {
 		coins = p.coins, prices = prices, boost = b,
 		profitAt = { ["5"] = Economy.profitAt(5, b.x), ["7"] = Economy.profitAt(7, b.x), ["10"] = Economy.profitAt(10, b.x), ["0"] = Economy.profitAt(0, b.x) },
-		owned = p.owned, equip = p.equip, boosts = p.boosts, packs = packList(p),
-		stats = { games = st.games, best = st.best, avg = st.prompts > 0 and math.floor(st.total / st.prompts * 10 + 0.5) / 10 or 0, tiers = st.tiers },
+		owned = p.owned, equip = p.equip, boosts = p.boosts, packs = packList(p), bankPrompts = #Bank.all, bankAnswers = bankAnswers,
+		stats = {
+			games = st.games, best = st.best, avg = st.games > 0 and math.floor(st.total / st.games + 0.5) or 0,
+			avgPer = st.games > 0 and math.floor((st.perSum or 0) / st.games + 0.5) or 0, deepest = st.deepest or 0,
+			answeredPct = st.prompts > 0 and math.floor((st.answered or 0) / st.prompts * 100 + 0.5) or 0, bins = st.bins or {}, tiers = st.tiers,
+		},
+		robuxReady = (function() local r = {} for price, id in Config.ROBUX_PRODUCTS do if id > 0 then r[tostring(price)] = true end end return r end)(),
 		inGame = games[player] ~= nil,
 	}
 end
@@ -85,10 +98,12 @@ end
 local function startPrompt(g, lead)
 	g.phase = "answering"
 	g.deadline = os.clock() + g.answerSeconds + (lead or 0) -- lead: the flush animation before the first prompt
+	g.tries = {}
 	Picker.markSeen(g.profile, g.ids[g.idx])
 end
 
 local function record(g, result)
+	result.tries = g.tries or {}
 	g.results[g.idx] = result
 	g.score += result.score
 	g.phase = "reveal"
@@ -112,11 +127,22 @@ local function finish(player, g)
 		paid = Economy.freeCoins(g.score)
 	end
 	p.coins += paid
+	local depth = 0
+	for i = 1, played do depth += TIER_DEPTH[g.results[i].score] or 0 end
 	if not g.cheated then
 		local st = p.stats
 		st.games += 1
 		st.total += g.score
 		st.prompts += played
+		local hits = 0
+		for i = 1, played do if g.results[i].score > 0 then hits += 1 end end
+		st.answered = (st.answered or 0) + hits
+		local per = g.score / math.max(1, played)
+		st.perSum = (st.perSum or 0) + per
+		st.bins = st.bins or {}
+		local bin = tostring(math.min(9, math.floor(per / 10)) + 1)
+		st.bins[bin] = (st.bins[bin] or 0) + 1
+		st.deepest = math.max(st.deepest or 0, depth)
 		st.best = math.max(st.best, g.score)
 		if g.pack then
 			p.packBest = p.packBest or {}
@@ -130,11 +156,14 @@ local function finish(player, g)
 	for i = 1, played do
 		local r = g.results[i]
 		local q = Bank.byId[g.ids[i]]
-		table.insert(rows, { prompt = q.q, answer = r.display or "—", score = r.score })
+		table.insert(rows, { q = q.q, answer = r.display, input = r.input, score = r.score, reason = r.reason, tries = r.tries })
 	end
+	lastGame[player] = { ids = table.move(g.ids, 1, played, 1, {}), results = g.results }
+	local st = p.stats
 	return {
 		done = true, score = g.score, prompts = played, ranked = g.ranked, pack = g.pack and g.pack.key, packName = g.pack and g.pack.name, price = g.price, boost = g.boost,
-		paid = paid, cheated = g.cheated, percentile = Economy.percentile(math.max(1, played), g.score), rows = rows,
+		paid = paid, cheated = g.cheated, percentile = Economy.percentile(math.max(1, played), g.score), rows = rows, depth = depth, len = g.len,
+		logbook = { played = st.games, avg = st.games > 0 and math.floor(st.total / st.games + 0.5) or 0, best = st.best },
 		profile = profileView(player),
 	}
 end
@@ -198,21 +227,38 @@ function actions.submit(player, args)
 	local j = Match.judge(q, text)
 	if j and j.answer then
 		local display = j.contained and text or (j.label and j.label ~= j.answer.name and j.label or j.answer.name)
-		record(g, { score = j.score, display = display })
+		record(g, { score = j.score, display = display, input = text })
 		return { result = "hit", answer = display, official = j.answer.name, score = j.score, total = g.score, reveal = revealOf(q), last = g.len > 0 and g.idx >= g.len }
 	elseif j and j.suggest then
 		return { result = "suggest", label = j.suggest.label }
 	end
-	g.tries = (g.tries or 0) + 1
+	g.tries = g.tries or {}
+	local norm = Match.norm(text)
+	for _, t in g.tries do if Match.norm(t) == norm then return { result = "dup" } end end
+	table.insert(g.tries, text)
 	return { result = "miss" }
 end
 
-function actions.timeout(player)
+function actions.timeout(player, args)
 	local g = games[player]
 	if not g or g.phase ~= "answering" then return { error = "No prompt running." } end
-	if os.clock() < g.deadline - 1 then return { error = "Time isn't up yet." } end
+	local skip = args and args.skip
+	if not skip and os.clock() < g.deadline - 1 then return { error = "Time isn't up yet." } end
 	local q = Bank.byId[g.ids[g.idx]]
-	record(g, { score = 0, display = nil })
+	-- whatever is in the box when time runs out still counts (like the website)
+	local text = tostring(args and args.text or ""):sub(1, 80)
+	if not skip and not text:match("^%s*$") then
+		local j = Match.judge(q, text)
+		if j and j.answer then
+			local display = j.contained and text or (j.label and j.label ~= j.answer.name and j.label or j.answer.name)
+			record(g, { score = j.score, display = display, input = text })
+			return { result = "hit", answer = display, official = j.answer.name, score = j.score, total = g.score, reveal = revealOf(q), last = g.len > 0 and g.idx >= g.len }
+		end
+		g.tries = g.tries or {}
+		if not table.find(g.tries, text) then table.insert(g.tries, text) end
+	end
+	local tries = g.tries or {}
+	record(g, { score = 0, display = nil, input = tries[#tries] or "", reason = skip and "skip" or "time" })
 	return { result = "timeout", score = 0, total = g.score, reveal = revealOf(q), last = g.len > 0 and g.idx >= g.len }
 end
 
@@ -242,7 +288,7 @@ end
 function actions.buy(player, args)
 	local p = Profiles.get(player)
 	local item = shopItem(tostring(args.id))
-	if not p or not item or item.passId then return { error = "Can't buy that." } end
+	if not p or not item or item.type ~= "boost" then return { error = "Looks are bought with Robux." } end
 	if item.type ~= "boost" and p.owned[item.id] then return { error = "You already own it." } end
 	if p.coins < item.price then return { error = "Not enough coins." } end
 	p.coins -= item.price
@@ -250,6 +296,34 @@ function actions.buy(player, args)
 	leaderstats(player, p)
 	task.spawn(Profiles.save, player)
 	return profileView(player)
+end
+
+-- every accepted answer for round i of the last finished game (the results page's "tap a round")
+function actions.answers(player, args)
+	local lg = lastGame[player]
+	local i = tonumber(args.i)
+	if not lg or not i or not lg.ids[i] then return { error = "No such round." } end
+	local q = Bank.byId[lg.ids[i]]
+	local r = lg.results[i] or {}
+	local out = {}
+	for _, a in Match.parseAnswers(q).list do
+		if not a.hidden or a.name == r.display then table.insert(out, { name = a.name, score = a.score, mine = (a.name == r.display) or nil }) end
+	end
+	table.sort(out, function(a, b) if a.score ~= b.score then return a.score > b.score end return a.name < b.name end)
+	return { list = out }
+end
+
+-- looks cost real Robux: one Developer Product per price (Config.ROBUX_PRODUCTS)
+function actions.buyRobux(player, args)
+	local p = Profiles.get(player)
+	local item = shopItem(tostring(args.id))
+	if not p or not item or item.type == "boost" then return { error = "Can't buy that." } end
+	if p.owned[item.id] then return { error = "You already own it." } end
+	local productId = Config.ROBUX_PRODUCTS[item.price] or 0
+	if productId <= 0 then return { error = "This item isn't on sale yet." } end
+	pendingBuy[player.UserId] = item.id
+	MarketplaceService:PromptProductPurchase(player, productId)
+	return { ok = true }
 end
 
 function actions.equip(player, args)
@@ -313,11 +387,36 @@ MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player, passI
 	task.spawn(Profiles.save, player)
 end)
 
+-- Robux purchases: grant the look the player picked (falls back to any unowned look at that price)
+local PRICE_OF = {}
+for price, id in Config.ROBUX_PRODUCTS do if id > 0 then PRICE_OF[id] = price end end
+MarketplaceService.ProcessReceipt = function(info)
+	local player = Players:GetPlayerByUserId(info.PlayerId)
+	local p = player and Profiles.get(player)
+	if not p then return Enum.ProductPurchaseDecision.NotProcessedYet end
+	p.receipts = p.receipts or {}
+	if p.receipts[info.PurchaseId] then return Enum.ProductPurchaseDecision.PurchaseGranted end
+	local price = PRICE_OF[info.ProductId]
+	local item = shopItem(pendingBuy[info.PlayerId] or "")
+	if not item or item.price ~= price or p.owned[item.id] then
+		item = nil
+		for _, s in Config.SHOP do if s.type ~= "boost" and s.price == price and not p.owned[s.id] then item = s; break end end
+	end
+	if item then p.owned[item.id] = true; p.equip[item.type] = item.id end
+	pendingBuy[info.PlayerId] = nil
+	p.receipts[info.PurchaseId] = true
+	local ok = pcall(Profiles.save, player)
+	if not ok then return Enum.ProductPurchaseDecision.NotProcessedYet end
+	push:FireClient(player, { kind = "profile", profile = profileView(player), bought = item and item.name })
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
 Players.PlayerRemoving:Connect(function(player)
 	local g = games[player]
 	-- leaving mid-ranked-run: get paid for what you answered (the entry is already spent)
 	if g and g.ranked then pcall(actions.endRun, player) end
 	games[player] = nil
 	lastCall[player] = nil
+	lastGame[player] = nil
 	Profiles.release(player)
 end)

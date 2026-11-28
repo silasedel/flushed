@@ -141,7 +141,7 @@ function Title.build(parent, state, cb)
 	-- fine print
 	local fpF = H <= 640 and 8 or 8.8
 	local fpW = math.min(bw, 680)
-	local fpStyle = { family = MONO, size = fpF, spacing = 0.03 * fpF, lineHeight = 1.35 * fpF, color = rgb(201, 213, 196), alpha = 0.5, width = fpW, align = "center" }
+	local fpStyle = { family = MONO, size = fpF, spacing = 0.03 * fpF, lineHeight = 1.35 * fpF, color = rgb(201, 213, 196), alpha = 0.72, width = fpW, align = "center" }
 	local _, fpH = Kit.measure(state.rules or "", fpStyle)
 	table.insert(blocks, { name = "fine", h = fpH, mt = H <= 640 and 4 or 6 })
 	-- title bar: len-pick + tabs (flex wrap, centred, gap 10)

@@ -6,6 +6,7 @@
 -- Pure Luau (no Roblox APIs) so tests can render it in the luau CLI and diff it against the website.
 local Canvas = require(script and script.Parent and script.Parent:FindFirstChild("Canvas") or "./Canvas")
 local Sprites = require(script and script.Parent and script.Parent:FindFirstChild("Sprites") or "./Sprites")
+local TextRaster = require(script and script.Parent and script.Parent:FindFirstChild("TextRaster") or "./TextRaster")
 
 local Ocean = {}
 
@@ -517,6 +518,77 @@ local function drawLedges(ctx)
 	end
 end
 
+local drawBurrow, drawWord
+-- Burrows: a hollowed-out arch in the bricks, a little home. Some have a mouse peeking out, some just eyes.
+drawBurrow = function(ctx, r, side, yb, wall, d)
+	local W = O.W
+	local s = r * 53 + side * 17
+	local hw, hh = 22, 16
+	local cx = wall * (0.35 + hash(s + 1) * 0.35)
+	local x = round(side == 1 and (W - cx - hw / 2) or (cx - hw / 2))
+	local y = yb - 6
+	local zc = wallColors(d)
+	-- frame (lighter stones around the arch), then the dark inside
+	fillRGB(ctx, zc[2]); ctx:fillRect(x - 2, y + 2, hw + 4, hh); ctx:fillRect(x, y, hw, 2)
+	ctx:setRGBA(8, 6, 12, 1)
+	ctx:fillRect(x, y + 4, hw, hh - 4); ctx:fillRect(x + 2, y + 2, hw - 4, 2); ctx:fillRect(x + 5, y + 1, hw - 10, 1)
+	-- floor: a tiny rug
+	local rugs = { { 255, 63, 180 }, { 125, 255, 106 }, { 255, 213, 74 }, { 74, 208, 255 } }
+	fillRGB(ctx, rugs[floor(hash(s + 2) * 4) + 1], 0.7); ctx:fillRect(x + 3, y + hh - 2, hw - 6, 1)
+	local kind = hash(s + 3)
+	local t = O.t + hash(s + 4) * 9
+	if kind < 0.55 then
+		-- a mouse leaning out: slides out, looks around, ducks back in
+		local cyc = fmod(t, 7) / 7
+		local out = cyc < 0.15 and cyc / 0.15 or (cyc < 0.6 and 1 or (cyc < 0.75 and 1 - (cyc - 0.6) / 0.15 or 0))
+		local face = side == 0 -- left wall: face right, into the tunnel
+		local name = d >= Z_CORE and "partyMouse" or "mouse0"
+		local sp = sprite(name)
+		local px = face and round(x + hw - sp.w * 0.55 + out * 8) or round(x - sp.w * 0.45 - out * 8)
+		ctx:save(); ctx:clipRect(face and x or (x - 24), y - 4, hw + 24, hh + 3)
+		drawSprite(ctx, name, px, y + hh - sp.h - 1, not face)
+		ctx:restore()
+	else
+		-- eyes in the dark, blinking
+		if fmod(t, 4) > 0.25 then
+			ctx:setRGBA(255, 220, 90, 1)
+			local ex = x + 7 + round(sin(t * 0.7) * 2)
+			ctx:fillRect(ex, y + 9, 2, 2); ctx:fillRect(ex + 6, y + 9, 2, 2)
+			glow(ctx, ex + 4, y + 10, 7, { 255, 213, 74 }, 0.18)
+		end
+	end
+	if d >= Z_CORE then -- party zone: string lights over the door
+		local cols = { "#ff3fb4", "#7dff6a", "#4ad0ff", "#ffe14a" }
+		for i = 0, 4 do
+			ctx:setFill(cols[(i + floor(O.t * 3)) % 4 + 1]); ctx:fillRect(x - 1 + i * 6, y - 3 + (i % 2), 2, 2)
+		end
+	end
+end
+-- Words painted on the bricks, like graffiti (zone-themed brainrot)
+local WORDS = {
+	sewer = { "HELP", "TURN BACK", "WET FLOOR", "NO DIVING", "FLUSHED", "WHO DID THIS" },
+	rat = { "RAT KING", "SQUEAK", "NO CATS", "CHEESE=LIFE", "KEEP OUT", "W RIZZ", "OHIO ->" },
+	core = { "SKIBIDI", "SIGMA", "GYATT", "NO CAP", "FANUM TAX", "BRAINROT", "SUS", "LOCK IN" },
+}
+drawWord = function(ctx, r, side, yb, wall, d)
+	local list = d < Z_RAT and WORDS.sewer or (d < Z_CORE and WORDS.rat or WORDS.core)
+	local s = r * 29 + side * 3
+	local word = list[floor(hash(s + 1) * #list) + 1]
+	local opts = { family = "vt323", size = 12 }
+	local L = TextRaster.layout(word, opts)
+	if L.w > wall - 12 then return end
+	local cx = wall * (0.3 + hash(s + 2) * 0.4)
+	cx = clamp(cx, L.w / 2 + 4, wall - L.w / 2 - 6)
+	local x = side == 1 and (O.W - cx - L.w / 2) or (cx - L.w / 2)
+	local zc = wallColors(d)
+	local col = zc[5]
+	local a = 0.85 + 0.1 * sin(O.t * 1.5 + r)
+	ctx:setRGBA(clamp(trunc(col[1]), 0, 255), clamp(trunc(col[2]), 0, 255), clamp(trunc(col[3]), 0, 255), a)
+	TextRaster.draw(word, opts, L, x, yb - 2, L.w, function(x0, x1, yy) ctx:fillRect(x0, yy, x1 - x0 + 1, 1) end)
+	-- drips under some letters
+	if hash(s + 3) > 0.5 then ctx:fillRect(round(x + L.w * 0.3), yb + 9, 1, 2 + floor(hash(s + 4) * 3)) end
+end
+
 local function drawTrench(ctx)
 	local ppm = O.ppm
 	local yStart = (PIPE_TOP - 40 + OFF - O.topM) * ppm
@@ -524,7 +596,8 @@ local function drawTrench(ctx)
 	local W = O.W
 	drawPipes(ctx)
 	local r0, r1 = floor((O.topM * ppm) / BH) - 1, math.ceil(((O.topM * ppm) + O.H) / BH) + 1
-	for r = r0, r1 do
+	local deco = {} -- burrows and wall words, drawn after every brick row so nothing covers them
+	for r = r0 - 2, r1 + 2 do
 		local yb, d = round(r * BH - O.topM * ppm), rowDepth(r)
 		if d >= SEWER_TOP then
 			local row = wallColors(d)
@@ -561,6 +634,8 @@ local function drawTrench(ctx)
 						ctx:setFill("#ff6a1f"); ctx:fillRect(tx + 1, ty - 4, 3, 4); ctx:setFill("#ffd23f"); ctx:fillRect(tx + 2, ty - 5 - round(fl), 1, 4)
 						ctx:setFill("#fff3b0"); ctx:fillRect(tx + 2, ty - 2, 1, 1)
 					end
+					if d >= Z_RAT - 150 and fmod(r, 3) == 0 and hash(r * 53 + side * 17) > 0.86 and wall > 40 then table.insert(deco, { drawBurrow, r, side, yb, wall, d }) end
+					if d >= SEWER_TOP + 200 and fmod(r, 3) == 1 and hash(r * 29 + side * 3) > (d < Z_RAT and 0.95 or 0.9) and wall > 44 then table.insert(deco, { drawWord, r, side, yb, wall, d }) end
 					if hash(r * 7 + side * 13) > 0.94 then -- glowing speck in the mortar
 						local gx = side == 1 and (W - wall * (0.3 + hash(r + 3) * 0.5)) or (wall * (0.3 + hash(r + 3) * 0.5))
 						local col = d < Z_RAT and { 125, 255, 106 } or (d < Z_CORE and { 255, 213, 74 } or { 255, 143, 209 })
@@ -570,6 +645,7 @@ local function drawTrench(ctx)
 			end
 		end
 	end
+	for _, q in deco do q[1](ctx, q[2], q[3], q[4], q[5], q[6]) end
 	-- brick archway where the sewer starts
 	local ya = round((SEWER_TOP + OFF - O.topM) * ppm)
 	if ya > -20 and ya < O.H + 20 then
@@ -658,7 +734,9 @@ local function drawCreatures(ctx)
 			local midM = c * CH + CH / 2
 			local z = zoneIndex(dz(midM))
 			local n
-			if dz(c * CH) > Z_MAD then n = 2 + (hash(c * 13) > 0.5 and 1 or 0)
+			-- Roblox version: the deep zones are calmer (a few crossers; the rest live on ledges and in burrows)
+			if dz(c * CH) > Z_MAD then n = hash(c * 13) > 0.55 and 1 or 0
+			elseif z >= 3 then n = hash(c * 7) > 0.62 and 1 or 0
 			else n = hash(c * 7) > 0.45 and 1 or (hash(c * 11) > 0.75 and 2 or 0) end
 			for k = 0, n - 1 do
 				local s = c * 97 + k * 31 + 5
@@ -669,7 +747,7 @@ local function drawCreatures(ctx)
 				if not (y < -30 or y > O.H + 30) then
 					local dir = hash(s + 2) > 0.5 and 1 or -1
 					local swims = mad or SWIMMERS[kind] == true
-					local sp = mad and (14 + hash(s + 3) * 20) or (swims and (4 + hash(s + 3) * 7) or (1.2 + hash(s + 3) * 2.2))
+					local sp = mad and (7 + hash(s + 3) * 9) or (swims and (4 + hash(s + 3) * 7) or (1.2 + hash(s + 3) * 2.2))
 					local span = O.W + 40
 					local x = fmod(fmod(hash(s + 4) * span + O.t * sp * dir, span) + span, span) - 20
 					local ph = hash(s + 5) * 6.28

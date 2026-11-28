@@ -173,13 +173,28 @@ function Kit.lh(size, family)
 	return math.floor(1.025 * size + 0.5) + math.floor(0.275 * size + 0.5)
 end
 
+-- smallest text size drawn (the app sets 10 so fine print stays readable on phones; 0 = exact website sizes)
+Kit.minTextSize = 0
+local function floorSize(style)
+	if style.size and style.size < Kit.minTextSize then
+		style = table.clone(style)
+		local k = Kit.minTextSize / style.size
+		style.size = Kit.minTextSize
+		if style.spacing then style.spacing *= k end
+		if style.lineHeight then style.lineHeight *= k end
+	end
+	return style
+end
+Kit.floorSize = floorSize
 function Kit.measure(text, style)
+	style = floorSize(style)
 	if style.upper then text = text:upper() end
 	local L = TextRaster.layout(text, { family = style.family, weight = style.weight, size = style.size, spacing = style.spacing, width = style.width and (style.width - (style.padLeft or 0)), lineHeight = style.lineHeight })
 	return L.w + (style.padLeft or 0), L.h, L
 end
 
 function Kit.text(parent, x, y, text, style, boxW)
+	style = floorSize(style)
 	if style.upper then text = text:upper() end
 	local opts = { family = style.family or "plex", weight = style.weight or 400, size = style.size, spacing = style.spacing or 0,
 		width = style.width and (style.width - (style.padLeft or 0)) or nil, lineHeight = style.lineHeight, align = style.align }
@@ -196,9 +211,22 @@ function Kit.text(parent, x, y, text, style, boxW)
 	holder.Position = Kit.UDim2.fromOffset(math.floor(x + 0.5), math.floor(y + 0.5))
 	holder.Size = Kit.UDim2.fromOffset(tw, th)
 	holder.Parent = parent
+	-- small text: rasterize at SS x and let the image be smoothed down to size (readable, nothing drops out)
+	local SS = 1
+	if Kit.makeImage and Kit.smallTextScale and style.size < 20 and W * Kit.smallTextScale <= 1024 and H * Kit.smallTextScale <= 1024 then SS = Kit.smallTextScale end
+	local dW, dH = W, H -- display size
+	local rOpts, rL = opts, L
+	if SS > 1 then
+		rOpts = table.clone(opts)
+		rOpts.size *= SS; rOpts.spacing *= SS
+		if rOpts.width then rOpts.width *= SS end
+		if rOpts.lineHeight then rOpts.lineHeight *= SS end
+		rL = TextRaster.layout(text, rOpts)
+		W, H = W * SS, H * SS
+	end
 	-- glyph mask
 	local mask = table.create(W * H, 0)
-	TextRaster.draw(text, opts, L, m + (style.padLeft or 0), m, tw - (style.padLeft or 0), function(x0, x1, yy)
+	TextRaster.draw(text, rOpts, rL, (m + (style.padLeft or 0)) * SS, m * SS, (tw - (style.padLeft or 0)) * SS, function(x0, x1, yy)
 		if yy >= 0 and yy < H then
 			for xx = math.max(0, x0), math.min(W - 1, x1) do mask[yy * W + xx + 1] = 1 end
 		end
@@ -207,7 +235,7 @@ function Kit.text(parent, x, y, text, style, boxW)
 	local strokeMask = nil
 	if style.stroke then
 		-- paint-order: stroke fill -> the outer half of the stroke shows around the glyphs
-		strokeMask = dilate(mask, W, H, style.stroke[1] / 2)
+		strokeMask = dilate(mask, W, H, style.stroke[1] * SS / 2)
 		shape = strokeMask
 	end
 	local color = style.color or rgb(255, 255, 255)
@@ -241,15 +269,15 @@ function Kit.text(parent, x, y, text, style, boxW)
 		local sh = style.shadows or {}
 		for i = #sh, 1, -1 do -- CSS draws the first shadow on top
 			local s = sh[i]
-			paint(blurAlpha(shape, W, H, s[3] or 0), s[4], s[5] or 1, math.floor(s[1] + 0.5), math.floor(s[2] + 0.5))
+			paint(blurAlpha(shape, W, H, (s[3] or 0) * SS), s[4], s[5] or 1, math.floor(s[1] * SS + 0.5), math.floor(s[2] * SS + 0.5))
 		end
 		if strokeMask then paint(strokeMask, style.stroke[2], 1, 0, 0) end
 		paint(mask, color, alpha, 0, 0)
 		local img = Kit.makeImage(W, H)
 		img:write(buf)
-		local lbl = img:label()
+		local lbl = img:label(SS > 1)
 		lbl.Position = Kit.UDim2.fromOffset(-m, -m)
-		lbl.Size = Kit.UDim2.fromOffset(W, H)
+		lbl.Size = Kit.UDim2.fromOffset(dW, dH)
 		lbl.Parent = holder
 	else
 		-- Frames fallback: runs of the glyph mask (no blur), shadows as offset copies, stroke via dilated mask
@@ -362,6 +390,169 @@ function Kit.scanlines(parent, W, H, z)
 	holder.Parent = parent
 	for y = 2, H, 3 do frame(holder, 0, y, W, 1, rgb(0, 0, 0), 0.07, z or 50) end
 	return holder
+end
+
+---------------------------------------------------------------- pixel sprites at any size (image-rendering: pixelated)
+-- Nearest-neighbour like Chrome: target pixel i samples source pixel floor((i + 0.5) * srcW / w).
+local spriteCache = {}
+-- tint: nil, "#rrggbb" (flat colour) or "~#rrggbb" (shade-preserving, same rule as ocean.js sprite())
+local function spriteGrid(name, tint)
+	local key = name .. (tint or "")
+	local c = spriteCache[key]
+	if c then return c end
+	local Sprites = require(script and script.Parent and script.Parent:FindFirstChild("Sprites") or "./Sprites")
+	local s = Sprites[name]
+	local pal = {}
+	for i, ph in s.pal do
+		local o = Kit.hex(ph)
+		if tint and tint:sub(1, 1) == "~" then
+			local t = Kit.hex(tint:sub(2))
+			local lum = 0.3 * o.R + 0.59 * o.G + 0.11 * o.B
+			if lum < 0.16 then pal[i] = Kit.hex("#0a1222")
+			else
+				local k = 0.5 + 0.7 * lum
+				pal[i] = rgb(math.min(255, math.floor(t.R * 255 * k)), math.min(255, math.floor(t.G * 255 * k)), math.min(255, math.floor(t.B * 255 * k)))
+			end
+		elseif tint then pal[i] = Kit.hex(tint)
+		else pal[i] = o end
+	end
+	local px = {}
+	local r = s.runs
+	for i = 1, #r, 4 do
+		local col = pal[r[i + 3]]
+		for k = 0, r[i + 2] - 1 do px[r[i + 1] * s.w + r[i] + k + 1] = col end
+	end
+	c = { w = s.w, h = s.h, px = px }
+	spriteCache[key] = c
+	return c
+end
+Kit.spriteGrid = spriteGrid
+-- returns the holder frame; w/h in px (may be fractional: the box is snapped like the browser's)
+function Kit.sprite(parent, name, x, y, w, h, alpha, solid)
+	local g = spriteGrid(name, type(solid) == "string" and solid or nil)
+	if type(solid) == "string" then solid = nil end
+	alpha = alpha or 1
+	local X0, Y0 = math.floor(x + 0.5), math.floor(y + 0.5)
+	local PW, PH = math.floor(x + w + 0.5) - X0, math.floor(y + h + 0.5) - Y0
+	local holder = Kit.new("Frame")
+	holder.BackgroundTransparency = 1
+	holder.Position = Kit.UDim2.fromOffset(X0, Y0)
+	holder.Size = Kit.UDim2.fromOffset(PW, PH)
+	holder.Parent = parent
+	if PW <= 0 or PH <= 0 then return holder end
+	if Kit.makeImage then
+		local buf = buffer.create(PW * PH * 4)
+		for py = 0, PH - 1 do
+			local sy = math.min(g.h - 1, math.floor((py + 0.5) * g.h / PH))
+			for pxx = 0, PW - 1 do
+				local sx = math.min(g.w - 1, math.floor((pxx + 0.5) * g.w / PW))
+				local c = g.px[sy * g.w + sx + 1]
+				if c and solid then c = solid end
+				if c then
+					buffer.writeu32(buf, (py * PW + pxx) * 4, math.floor(c.R * 255 + 0.5) + math.floor(c.G * 255 + 0.5) * 256 + math.floor(c.B * 255 + 0.5) * 65536 + math.floor(alpha * 255 + 0.5) * 16777216)
+				end
+			end
+		end
+		local img = Kit.makeImage(PW, PH)
+		img:write(buf)
+		local lbl = img:label()
+		lbl.Size = Kit.UDim2.fromOffset(PW, PH)
+		lbl.Parent = holder
+	else
+		for py = 0, PH - 1 do
+			local sy = math.min(g.h - 1, math.floor((py + 0.5) * g.h / PH))
+			local x0, cur = nil, nil
+			for pxx = 0, PW do
+				local c = pxx < PW and g.px[sy * g.w + math.min(g.w - 1, math.floor((pxx + 0.5) * g.w / PW)) + 1] or nil
+				if c and solid then c = solid end
+				if c ~= cur then
+					if cur then frame(holder, x0, py, pxx - x0, 1, cur, alpha) end
+					x0, cur = pxx, c
+				end
+			end
+		end
+	end
+	return holder
+end
+
+---------------------------------------------------------------- dashed 1px rule (CSS border-top: 1px dashed)
+-- Chrome draws 3px dashes with ~2px gaps, stretched so the rule starts and ends on a dash.
+function Kit.dashH(parent, x, y, w, color, alpha)
+	local x0, x1 = math.ceil(x - 0.01), math.floor(x + w + 0.01)
+	local len = x1 - x0
+	if len < 3 then return end
+	local n = math.max(1, math.floor((len + 2) / 5))
+	local gap = n > 1 and (len - 3 * n) / (n - 1) or 0
+	for i = 0, n - 1 do frame(parent, x0 + i * (3 + gap), math.floor(y), 3, 1, color, alpha) end
+end
+
+---------------------------------------------------------------- inline rich text (spans of different colour/size)
+-- segs = { {text, style, ml = margin-left px}, ... }; strut = the block's own style (its font sets the minimum line box).
+-- Wraps like CSS (greedy at spaces), lines sized by the tallest inline box (line-height: normal).
+-- Returns total height and the list of lines ({y, h, w}).
+function Kit.richLayout(segs, width, strut)
+	local toks = {}
+	for si, sg in segs do
+		local st = sg.style
+		local first = true
+		local text = st.upper and sg[1]:upper() or sg[1]
+		for word, sp in text:gmatch("(%S*)(%s*)") do
+			if word == "" and sp == "" then continue end
+			local ww = word ~= "" and Kit.measure(word, { family = st.family, weight = st.weight, size = st.size, spacing = st.spacing }) or 0
+			local spw = sp ~= "" and Kit.measure(" ", { family = st.family, weight = st.weight, size = st.size, spacing = st.spacing }) or 0
+			table.insert(toks, { seg = si, word = word, sp = sp ~= "", ww = ww, spw = spw, ml = first and (sg.ml or 0) or 0 })
+			first = false
+		end
+	end
+	local lines, cur, x = {}, {}, 0
+	for _, t in toks do
+		local start = x + t.ml
+		if width and #cur > 0 and t.word ~= "" and start + t.ww > width + 0.01 then
+			table.insert(lines, cur); cur = {}; x = 0; start = 0
+		end
+		t.x = start
+		table.insert(cur, t)
+		x = start + t.ww + (t.sp and t.spw or 0)
+	end
+	table.insert(lines, cur)
+	local out, y = {}, 0
+	for _, ln in lines do
+		local sa = strut and math.floor(1.025 * strut.size + 0.5) or 0
+		local sd = strut and math.floor(0.275 * strut.size + 0.5) or 0
+		local w = 0
+		for _, t in ln do
+			local st = segs[t.seg].style
+			sa = math.max(sa, math.floor(1.025 * st.size + 0.5)); sd = math.max(sd, math.floor(0.275 * st.size + 0.5))
+			w = math.max(w, t.x + t.ww)
+		end
+		table.insert(out, { y = y, h = sa + sd, asc = sa, w = w, toks = ln })
+		y += sa + sd
+	end
+	return out, y
+end
+function Kit.rich(parent, x, y, width, segs, strut, align)
+	local lines, h = Kit.richLayout(segs, width, strut)
+	for _, ln in lines do
+		local off = 0
+		if align == "center" and width then off = (width - ln.w) / 2 elseif align == "right" and width then off = width - ln.w end
+		-- draw runs of tokens from the same segment as one text
+		local i = 1
+		while i <= #ln.toks do
+			local t = ln.toks[i]
+			local j, s = i, t.word
+			while j + 1 <= #ln.toks and ln.toks[j + 1].seg == t.seg do
+				s ..= (ln.toks[j].sp and " " or "") .. ln.toks[j + 1].word
+				j += 1
+			end
+			if s ~= "" then
+				local st = table.clone(segs[t.seg].style)
+				st.width, st.align, st.lineHeight, st.upper = nil, nil, nil, nil
+				Kit.text(parent, x + off + t.x, y + ln.y + ln.asc - math.floor(1.025 * st.size + 0.5), s, st)
+			end
+			i = j + 1
+		end
+	end
+	return h, lines
 end
 
 return Kit

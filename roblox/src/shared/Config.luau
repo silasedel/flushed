@@ -9,7 +9,7 @@ Config.ENDLESS_RANKED_LENGTH = 10 -- ranked can't be endless; picking ∞ prices
 
 -- Flush Coins: the game's EARN-ONLY currency. Roblox rules: you can't pay Robux out to players, and staking
 -- anything bought with Robux on a result counts as gambling. So coins can never be bought with Robux.
-Config.START_COINS = 1000
+Config.START_COINS = 0 -- everyone starts broke; free games pay coins, ranked pays more
 Config.FREE_RATE = 20 -- free games pay 1 coin per 20 points (so free play keeps you topped up)
 Config.RANKED_RATE = 5 -- ranked pays 1 coin per 5 points up to par...
 Config.UPPER_RATE = 0.2 -- ...then 1 per 25 points above par
@@ -37,44 +37,50 @@ Config.PACKS = {
 }
 Config.PACK_MIX = { "easy", "easy", "easy", "medium", "medium", "medium", "hard" }
 
--- Shop: cosmetics and boosts bought with Flush Coins. `color` tints the duck/toilet pixel art (shade-preserving),
--- `fx` adds an effect (diamond sparkle, rainbow, million-coin crown), `sprite` swaps the toilet art, `trail` = trail kind.
--- Robux items go in ROBUX_PASSES below (cosmetic only).
+-- Shop: the website's items and prices. Looks (duck / toilet / trail) cost real Robux: each price is a Developer
+-- Product (ROBUX_PRODUCTS below maps price -> product id; create them on the Creator Dashboard). Boosts cost earned
+-- coins. `tint` recolours the pixel art ("~#hex" keeps the shading), `fx` adds an effect, `sprite` swaps the toilet
+-- art, `trail` picks the trail.
 Config.SHOP = {
-	{ id = "duck-mint", type = "duck", name = "Mint Duck", price = 50, color = "#9fffd0" },
-	{ id = "duck-peach", type = "duck", name = "Peach Duck", price = 100, color = "#ffb88a" },
-	{ id = "duck-ice", type = "duck", name = "Ice Duck", price = 250, color = "#9fe8ff" },
-	{ id = "duck-bubblegum", type = "duck", name = "Bubblegum Duck", price = 400, color = "#ff7ac8" },
-	{ id = "duck-toxic", type = "duck", name = "Toxic Duck", price = 600, color = "#7dff6a" },
-	{ id = "duck-void", type = "duck", name = "Void Duck", price = 1500, color = "#8a5cff" },
-	{ id = "duck-gold", type = "duck", name = "Golden Duck", price = 5000, color = "#ffcc33" },
-	{ id = "duck-diamond", type = "duck", name = "Diamond Duck", price = 100000, color = "#dff8ff", fx = "diamond" },
-	{ id = "duck-rainbow", type = "duck", name = "Rainbow Duck", price = 250000, color = "#ff7ad9", fx = "rainbow" },
-	{ id = "duck-million", type = "duck", name = "One-in-a-Million Duck", price = 1000000, color = "#ffd23f", fx = "million" },
-	{ id = "toilet-sky", type = "toilet", name = "Sky Blue Toilet", price = 100, color = "#bfe6ff" },
-	{ id = "toilet-pink", type = "toilet", name = "Pink Porcelain", price = 500, color = "#ffb3d9" },
-	{ id = "toilet-obsidian", type = "toilet", name = "Obsidian Throne", price = 2500, color = "#4a4458" },
-	{ id = "toilet-gold", type = "toilet", name = "Golden Throne", price = 20000, color = "#ffcc33", sprite = "goldtoilet" },
-	{ id = "toilet-diamond", type = "toilet", name = "Diamond Throne", price = 500000, color = "#e6fbff" },
-	{ id = "trail-bubble", type = "trail", name = "Bubble Trail", price = 50, color = "#c8f0ff", trail = "bubble" },
-	{ id = "trail-confetti", type = "trail", name = "Confetti Trail", price = 250, color = "#ff3fb4", trail = "confetti" },
-	{ id = "trail-sparkle", type = "trail", name = "Sparkle Trail", price = 1200, color = "#ffe14a", trail = "sparkle" },
-	{ id = "trail-fire", type = "trail", name = "Fire Trail", price = 1750, color = "#ff4d2a", trail = "fire" },
-	{ id = "trail-rainbow", type = "trail", name = "Rainbow Trail", price = 2000, color = "#7dff6a", trail = "rainbow" },
-	{ id = "trail-money", type = "trail", name = "Money Trail", price = 75000, color = "#7dff6a", trail = "money" },
-	{ id = "trail-aura", type = "trail", name = "Infinite Aura Trail", price = 150000, color = "#8a5cff", trail = "aura" },
+	{ id = "duck-mint", type = "duck", name = "Mint Duck", price = 5, tint = "~#9fffd0" },
+	{ id = "duck-peach", type = "duck", name = "Peach Duck", price = 10, tint = "~#ffb88a" },
+	{ id = "duck-lemon", type = "duck", name = "Lemonade Duck", price = 15, tint = "~#fff27a" },
+	{ id = "duck-diamond", type = "duck", name = "Diamond Duck", price = 25000, tint = "~#dff8ff", fx = "diamond" },
+	{ id = "duck-rainbow", type = "duck", name = "Rainbow Duck", price = 100000, fx = "rainbow" },
+	{ id = "duck-million", type = "duck", name = "One-in-a-Million Duck", price = 1000000, tint = "~#ffd23f", fx = "million" },
+	{ id = "duck-gold", type = "duck", name = "Golden Duck", price = 250, tint = "~#ffcc33" },
+	{ id = "duck-ninja", type = "duck", name = "Ninja Duck", price = 150, tint = "~#4a4f5e" },
+	{ id = "duck-bubblegum", type = "duck", name = "Bubblegum Duck", price = 100, tint = "~#ff7ac8" },
+	{ id = "duck-ice", type = "duck", name = "Ice Duck", price = 100, tint = "~#9fe8ff" },
+	{ id = "duck-toxic", type = "duck", name = "Toxic Duck", price = 120, tint = "~#7dff6a" },
+	{ id = "duck-void", type = "duck", name = "Void Duck", price = 300, tint = "~#8a5cff" },
+	{ id = "toilet-sky", type = "toilet", name = "Sky Blue Toilet", price = 10, tint = "~#bfe6ff" },
+	{ id = "toilet-mint", type = "toilet", name = "Mint Toilet", price = 20, tint = "~#c6ffe0" },
+	{ id = "toilet-gold", type = "toilet", name = "Golden Throne", price = 400, sprite = "goldtoilet" },
+	{ id = "toilet-diamond", type = "toilet", name = "Diamond Throne", price = 250000, tint = "~#e6fbff", fx = "diamond" },
+	{ id = "toilet-ratking", type = "toilet", name = "Rat King's Throne", price = 500000, sprite = "goldtoilet", fx = "crown" },
+	{ id = "toilet-pink", type = "toilet", name = "Pink Porcelain", price = 150, tint = "~#ffb3d9" },
+	{ id = "toilet-obsidian", type = "toilet", name = "Obsidian Throne", price = 250, tint = "~#4a4458" },
+	{ id = "trail-bubble", type = "trail", name = "Bubble Trail", price = 5, trail = "bubble" },
+	{ id = "trail-confetti", type = "trail", name = "Confetti Trail", price = 25, trail = "confetti" },
+	{ id = "trail-rainbow", type = "trail", name = "Rainbow Trail", price = 200, trail = "rainbow" },
+	{ id = "trail-money", type = "trail", name = "Money Trail", price = 75000, trail = "money" },
+	{ id = "trail-aura", type = "trail", name = "Infinite Aura Trail", price = 150000, trail = "aura" },
+	{ id = "trail-sparkle", type = "trail", name = "Sparkle Trail", price = 120, trail = "sparkle" },
+	{ id = "trail-fire", type = "trail", name = "Fire Trail", price = 175, trail = "fire" },
 	{ id = "boost-time", type = "boost", name = "Extra Time", note = "+5s every prompt, next ranked run", price = 25 },
 }
-
--- Robux game passes (cosmetic only). Create the pass on the Creator Dashboard, paste its id here, and it shows up
--- in the shop. 0 = hidden.
-Config.ROBUX_PASSES = {
-	{ id = "pass-neon", passId = 0, type = "duck", name = "Neon Duck (Game Pass)", color = "#39ff14" },
+-- Robux price -> Developer Product id (Creator Dashboard > your game > Monetization > Developer Products, one product
+-- per price, named e.g. "Look R$100"). A look whose price has no product yet shows "SOON" and can't be bought.
+Config.ROBUX_PRODUCTS = {
+	[5] = 0, [10] = 0, [15] = 0, [20] = 0, [25] = 0, [100] = 0, [120] = 0, [150] = 0, [175] = 0, [200] = 0, [250] = 0,
+	[300] = 0, [400] = 0, [25000] = 0, [75000] = 0, [100000] = 0, [150000] = 0, [250000] = 0, [500000] = 0, [1000000] = 0,
 }
+Config.ROBUX_PASSES = {}
 
--- Sounds: upload in Studio (Asset Manager), paste the "rbxassetid://..." ids here. Empty = silent.
--- (All the art is pixel sprites drawn in code from client/Sprites.luau, so there's nothing to upload for visuals.)
-Config.INTRO_SECONDS = 3.1 -- the flush animation before the first prompt (added to the first prompt's clock)
-Config.SOUNDS = { correct = "", miss = "", flush = "", tick = "" }
+-- Sounds: the website's synthesized effects, rendered by tools/roblox-sounds.js into one file (roblox/audio/flushed-sfx.ogg),
+-- each effect in its own 4-second slot. Upload that file once (Studio > Asset Manager > Import) and paste its id here.
+Config.SFX_ID = "" -- e.g. "rbxassetid://1234567890"; empty = silent
+Config.SOUND_SLOTS = { click = 0, start = 1, tick = 2, tickUrgent = 3, go = 4, wrong = 5, dup = 6, correct10 = 7, correct30 = 8, correct60 = 9, correct85 = 10, correct100 = 11, miss = 12, descend10 = 13, descend30 = 14, descend60 = 15, descend85 = 16, descend100 = 17, flush = 18, finish = 19, buy = 20 }
 
 return Config

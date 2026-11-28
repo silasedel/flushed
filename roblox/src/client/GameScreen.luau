@@ -128,15 +128,22 @@ function Game:layout()
 	end
 	-- HUD boxes
 	local u = m.u
-	local function hudBox(x, label, right)
-		local box = Kit.chamfer(ui, x, m.padT, m.boxW, m.boxH, C.panel, 0.9)
+	-- Roblox draws its own buttons in the top-left corner: the DEPTH box starts right of them
+	m.depthX = m.padL
+	local tb = Game.topbar
+	if tb and tb.bottom > m.padT and tb.right + 6 > m.depthX then m.depthX = tb.right + 6 end
+	local function hudBox(x, label, right, w)
+		w = w or m.boxW
+		local box = Kit.chamfer(ui, x, m.padT, w, m.boxH, C.panel, 0.9)
 		local ls = { family = MONO, size = 10.88, spacing = 0.32 * 10.88, color = C.muted }
 		local lw = Kit.measure(label, ls)
 		local padL, padT = 1.1 * u, 0.55 * u
-		Kit.text(box, right and (m.boxW - padL - lw) or padL, padT, label, ls)
+		Kit.text(box, right and (w - padL - lw) or padL, padT, label, ls)
+		box:SetAttribute("W", w)
 		return box, padL, padT
 	end
-	self.depthBox = hudBox(m.padL, "DEPTH", false)
+	self.hudBox = hudBox
+	self.depthBox = hudBox(m.depthX, "DEPTH", false)
 	self.scoreBox = hudBox(W - m.padR - m.boxW, "SCORE", true)
 	self.rects["hud-depth"] = { m.padL, m.padT, m.boxW, m.boxH }
 	self.rects["hud-score"] = { W - m.padR - m.boxW, m.padT, m.boxW, m.boxH }
@@ -186,12 +193,15 @@ function Game:layout()
 	self.dock = layer(ui, "Dock")
 	local dock = self.dock
 	local px = m.panelX
+	local dockW = m.panelW
+	-- small phones: the website squeezes the answer box to ~100px; here the dock uses the whole screen width instead
+	if m.panelW - tSize - gap - btnW - gap < 180 then px, dockW = 10, W - 20 end
 	-- timer ring (pixel image) at the left
 	d.timerX, d.timerY = px, d.rowY + 6
 	self.timerHolder = layer(dock, "Timer")
 	-- input column
 	d.inX = px + tSize + gap
-	d.inW = m.panelW - tSize - gap - btnW - gap
+	d.inW = dockW - tSize - gap - btnW - gap
 	d.inY = d.rowY + (rowH - colH) / 2 + 14 -- the column is centred in the row (timer and button stick to the top)
 	local input = Kit.box(dock, d.inX, d.inY, d.inW, inH, { bg = hex("#0f1712"), border = 3, bc = hex("#a8ff8c") })
 	self.inputBox = input
@@ -281,18 +291,26 @@ function Game:setHud(depth, score)
 	local m = self.m
 	local f = Css.clamp(24, 16 + Css.vw(1.4), 40)
 	local u = m.u
-	local function val(box, text, right, color)
-		local old = box:FindFirstChild("Val")
-		if old then old:Destroy() end
+	-- the boxes grow with their numbers (min-width like the website, never clipping "12,345m")
+	local function val(which, text, right, color)
 		local st = { family = MONO, weight = 600, size = f, spacing = 0.02 * f, color = color, lineHeight = f }
 		local w = Kit.measure(text, st)
 		local padL = 1.1 * u
+		local need = math.max(m.boxW, math.ceil(w + 2 * padL))
+		local box = self[which]
+		if (box:GetAttribute("W") or m.boxW) ~= need then
+			box:Destroy()
+			box = self.hudBox(right and (m.W - m.padR - need) or m.depthX, right and "SCORE" or "DEPTH", right, need)
+			self[which] = box
+		end
+		local old = box:FindFirstChild("Val")
+		if old then old:Destroy() end
 		local y = 0.55 * u + Kit.lh(10.88) + 0.35 * f
-		local h = Kit.text(box, right and (m.boxW - padL - w) or padL, y, text, st)
+		local h = Kit.text(box, right and (need - padL - w) or padL, y, text, st)
 		h.Name = "Val"
 	end
-	val(self.depthBox, fmt(math.max(0, depth)) .. "m", false, C.lime)
-	val(self.scoreBox, tostring(score), true, C.pink)
+	val("depthBox", fmt(math.max(0, depth)) .. "m", false, C.lime)
+	val("scoreBox", tostring(score), true, C.pink)
 end
 
 -- pips: list of {state = "done"|"miss"|"cur"|"todo", color}; label under them
@@ -394,7 +412,7 @@ function Game:setTimer(left, total)
 	clear(self.timerHolder)
 	local size = math.floor(d.tSize + 0.5)
 	local urgent = left <= 5
-	local fg = urgent and { 255, 92, 138 } or { 111, 174, 92 }
+	local fg = urgent and { 255, 77, 77 } or { 111, 174, 92 }
 	local img = Canvas.image(size, size)
 	local s = size / 64
 	local frac = math.clamp(left / total, 0, 1)
@@ -421,7 +439,7 @@ function Game:setTimer(left, total)
 					local hx, hy = math.sin(ha), -math.cos(ha)
 					local along = dx * hx + dy * hy
 					local across = math.abs(dx * hy - dy * hx)
-					if along >= 0 and along <= 23 and across <= 1 then col, a = urgent and { 255, 92, 138 } or { 157, 255, 122 }, 0.55 end
+					if along >= 0 and along <= 23 and across <= 1 then col, a = urgent and { 255, 77, 77 } or { 157, 255, 122 }, 0.55 end
 					if col then
 						acc[1] += col[1] * a; acc[2] += col[2] * a; acc[3] += col[3] * a; acc[4] += a
 					end
@@ -439,14 +457,16 @@ function Game:setTimer(left, total)
 		l.Position = Kit.UDim2.fromOffset(math.floor(d.timerX + 0.5), math.floor(d.timerY + 0.5))
 		l.Size = Kit.UDim2.fromOffset(size, size)
 		l.Parent = self.timerHolder
+		self.timerImg = l
 	end
 	local nf = Css.cr(1.2, 0.9, 0.8, 1.8)
-	local st = { family = MONO, weight = 600, size = nf, color = urgent and C.pink or hex("#a8ff8c") }
+	local st = { family = MONO, weight = 600, size = nf, color = urgent and hex("#ff4d4d") or hex("#a8ff8c") }
 	local w = Kit.measure(tostring(n), st)
-	Kit.text(self.timerHolder, d.timerX + (size - w) / 2, d.timerY + (size - Kit.lh(nf)) / 2, tostring(n), st)
+	self.timerNum = Kit.text(self.timerHolder, d.timerX + (size - w) / 2, d.timerY + (size - Kit.lh(nf)) / 2, tostring(n), st)
+	self.timerUrgent = urgent
 	-- time bar
 	self.timeBar.Size = Kit.UDim2.fromOffset(math.floor(d.inW * frac + 0.5), 8)
-	self.timeBar.BackgroundColor3 = urgent and C.pink or hex("#a8ff8c")
+	self.timeBar.BackgroundColor3 = urgent and hex("#ff4d4d") or hex("#a8ff8c")
 end
 
 -- did-you-mean box above the dock: "typed" -> "fix" / submit again to confirm · or edit
@@ -690,6 +710,10 @@ function Game:update(O, sinking)
 		local wob = math.sin(tt / 1.3 * 2 * math.pi)
 		sc.holder.Position = Kit.UDim2.fromOffset(math.floor(m.W / 2 - sc.w / 2 + wob * 4 + 0.5), math.floor(p.y - 46 - sc.h / 2 + math.abs(wob) * 4 + 0.5))
 	end
+	-- last 5 seconds: the clock blinks red (4 times a second)
+	local on = not self.timerUrgent or (math.floor(os.clock() * 4) % 2 == 0)
+	if self.timerNum then self.timerNum.Visible = on end
+	if self.timerImg then self.timerImg.ImageTransparency = on and 0 or 0.55 end
 	-- caret blink
 	if self.caret then self.caret.Visible = (math.floor(os.clock() * 2) % 2 == 0) end
 end

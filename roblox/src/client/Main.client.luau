@@ -1,536 +1,837 @@
--- FLUSHED client: every screen, built in code (title, prompt, reveal, results, shop, stats).
--- The server does all judging and money; this script only shows things and sends what you type.
+-- FLUSHED client: the website (https://silasedel.github.io/flushed/) rebuilt for Roblox.
+-- The scene is js/ocean.js ported line for line (Ocean.luau) and drawn into an EditableImage every frame; every
+-- screen is the website's CSS as maths (TitleScreen / GameScreen / ResultsScreen / Panels), in the website's fonts.
+-- The server (ServerScriptService.Flushed) owns the clock, judges answers and pays coins; this script only shows
+-- things and forwards input.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local AssetService = game:GetService("AssetService")
+local GuiService = game:GetService("GuiService")
+local StarterGui = game:GetService("StarterGui")
+local SocialService = game:GetService("SocialService")
 local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 
+local here = script.Parent
+local Kit = require(here.Kit)
+local Ocean = require(here.Ocean)
+local Title = require(here.TitleScreen)
+local GameUI = require(here.GameScreen)
+local Results = require(here.ResultsScreen)
+local Panels = require(here.Panels)
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Config = require(Shared.Config)
-local Match = require(Shared.Match) -- only for tier names/colors
-local remote = ReplicatedStorage:WaitForChild("Flushed")
+local Css = Kit.Css
+local rgb, hex = Kit.rgb, Kit.hex
+local fmt = GameUI.fmt
+local TIERS = GameUI.TIERS
+
 local player = Players.LocalPlayer
+local remote = ReplicatedStorage:WaitForChild("Flushed")
+local push = ReplicatedStorage:WaitForChild("FlushedPush")
 
--- FLUSHED is a full-screen single-player game: hide Roblox's player list and chat window so they don't cover
--- the score and coins (coins and best score are shown by the game itself)
-local StarterGui = game:GetService("StarterGui")
-task.spawn(function()
-	for _ = 1, 10 do
-		local ok = pcall(function()
-			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
-			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
-		end)
-		if ok then break end
-		task.wait(0.5)
-	end
-end)
-
----------------------------------------------------------------- look
-local TITLE_FONT = Enum.Font.Arcade
-local BODY_FONT = Enum.Font.GothamBold
-local INK = Color3.fromRGB(255, 255, 255)
-local DIM = Color3.fromRGB(190, 205, 200)
-local GOLD = Color3.fromHex("#ffd23f")
-local PANEL = Color3.fromRGB(12, 18, 16)
-local GREEN = Color3.fromHex("#7dff6a")
-local RED = Color3.fromHex("#ff5a5a")
-
-local function make(class, props, children)
-	local o = Instance.new(class)
-	for k, v in props or {} do
-		if k ~= "Parent" then o[k] = v end
-	end
-	for _, c in children or {} do c.Parent = o end
-	if props and props.Parent then o.Parent = props.Parent end
-	return o
-end
--- labels get a text outline (Contextual); buttons and boxes get a border (Border), not an outline around their letters
-local function stroke(o, thickness, color, border)
-	make("UIStroke", { Thickness = thickness or 2, Color = color or Color3.new(0, 0, 0), ApplyStrokeMode = border and Enum.ApplyStrokeMode.Border or Enum.ApplyStrokeMode.Contextual, Parent = o })
-	return o
-end
-local function maxText(o, px) make("UITextSizeConstraint", { MaxTextSize = px, Parent = o }); return o end
-local function label(props)
-	local l = make("TextLabel", {
-		BackgroundTransparency = 1, Font = props.Font or BODY_FONT, TextColor3 = props.TextColor3 or INK, TextScaled = true,
-		TextWrapped = true, Size = props.Size, Position = props.Position, AnchorPoint = props.AnchorPoint or Vector2.zero,
-		Text = props.Text or "", TextXAlignment = props.TextXAlignment or Enum.TextXAlignment.Center, RichText = true,
-		Parent = props.Parent, ZIndex = props.ZIndex or 1, LayoutOrder = props.LayoutOrder or 0,
-	})
-	return maxText(l, props.Max or 28)
-end
-local function button(props)
-	local b = make("TextButton", {
-		AutoButtonColor = true, BackgroundColor3 = props.Color or Color3.fromRGB(20, 30, 26), BorderSizePixel = 0,
-		Font = props.Font or BODY_FONT, TextColor3 = props.TextColor3 or INK, TextScaled = true, RichText = true,
-		Text = props.Text or "", Size = props.Size, Position = props.Position, AnchorPoint = props.AnchorPoint or Vector2.zero,
-		Parent = props.Parent, LayoutOrder = props.LayoutOrder or 0, ZIndex = props.ZIndex or 1,
-	})
-	stroke(b, props.Stroke or 3, props.StrokeColor or INK, true)
-	maxText(b, props.Max or 26)
-	make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4), Parent = b })
-	return b
-end
-local function commas(n)
-	local s = tostring(math.floor(n))
-	local out = s:reverse():gsub("(%d%d%d)", "%1,"):reverse()
-	return (out:gsub("^,", ""))
-end
-local function coinText(n) return "💰" .. commas(n) end
-
----------------------------------------------------------------- sound
-local sounds = {}
-for name, id in Config.SOUNDS do
-	if id ~= "" then sounds[name] = make("Sound", { SoundId = id, Volume = 0.6, Parent = SoundService }) end
-end
-local function play(name) if sounds[name] then sounds[name]:Play() end end
-
----------------------------------------------------------------- server calls
-local gui = make("ScreenGui", { Name = "Flushed", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
-local toastLabel
-local function toast(msg)
-	toastLabel.Text = msg
-	toastLabel.Visible = true
-	local token = {}
-	toastLabel:SetAttribute("t", tostring(token))
-	task.delay(2.6, function() if toastLabel:GetAttribute("t") == tostring(token) then toastLabel.Visible = false end end)
-end
-local busy = false
-local function call(action, args)
-	if busy then return nil end
-	busy = true
-	local ok, res = pcall(remote.InvokeServer, remote, action, args or {})
-	busy = false
-	if not ok then toast("Connection hiccup, try again."); return nil end
-	if type(res) == "table" and res.error then toast(res.error); return nil end
-	return res
-end
-
----------------------------------------------------------------- the pixel-art world (Scene.luau): bowl, flush, sewer dive
-local Scene = require(script.Parent.Scene)
-Scene.init(gui)
-local ALL_ITEMS = table.clone(Config.SHOP)
-for _, s in Config.ROBUX_PASSES do table.insert(ALL_ITEMS, s) end
-
--- coins in the corner
-local coinCorner = label({ Parent = gui, Size = UDim2.new(0, 170, 0, 36), Position = UDim2.new(1, -12, 0, 12), AnchorPoint = Vector2.new(1, 0), Max = 22, ZIndex = 5 })
-coinCorner.BackgroundColor3 = PANEL; coinCorner.BackgroundTransparency = 0.15
-stroke(coinCorner, 2, GOLD, true)
-
-toastLabel = label({ Parent = gui, Size = UDim2.new(0.6, 0, 0, 44), Position = UDim2.new(0.5, 0, 1, -24), AnchorPoint = Vector2.new(0.5, 1), Max = 20, ZIndex = 50 })
-toastLabel.BackgroundColor3 = PANEL; toastLabel.BackgroundTransparency = 0.05; toastLabel.Visible = false
-stroke(toastLabel, 2, INK, true)
-
-local function screen(name)
-	local f = make("Frame", { Name = name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, Parent = gui })
-	make("UIPadding", { PaddingTop = UDim.new(0, 60), PaddingBottom = UDim.new(0, 70), PaddingLeft = UDim.new(0.06, 0), PaddingRight = UDim.new(0.06, 0), Parent = f })
-	return f
-end
-local screens = { title = screen("Title"), play = screen("Play"), results = screen("Results") }
-local function show(name)
-	for k, f in screens do f.Visible = (k == name) end
-end
-
----------------------------------------------------------------- state
-local profile = nil
-local len = 7
-local lastMode, lastPack = "free", nil
-local function itemById(id)
-	for _, s in Config.SHOP do if s.id == id then return s end end
-	for _, s in Config.ROBUX_PASSES do if s.id == id then return s end end
-	return nil
-end
-
----------------------------------------------------------------- TITLE
-local T = screens.title
-local titleText = label({ Parent = T, Text = "FLUSHED", Font = TITLE_FONT, Size = UDim2.new(1, 0, 0.16, 0), Max = 110, TextColor3 = GOLD })
-stroke(titleText, 4)
-local sub = label({ Parent = T, Text = "25 seconds a prompt · rarer answers flush you deeper", Size = UDim2.new(1, 0, 0.05, 0), Position = UDim2.fromScale(0, 0.16), Max = 20 })
-stroke(sub, 2)
-local skinLabel = label({ Parent = T, Text = "", Size = UDim2.new(1, 0, 0.03, 0), Position = UDim2.fromScale(0, 0.435), Max = 15, TextColor3 = DIM })
-local lenRow = make("Frame", { Parent = T, BackgroundTransparency = 1, Size = UDim2.new(0.7, 0, 0.065, 0), Position = UDim2.fromScale(0.5, 0.47), AnchorPoint = Vector2.new(0.5, 0) }, {
-	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-})
-label({ Parent = lenRow, Text = "PROMPTS", Size = UDim2.new(0.22, 0, 1, 0), Max = 18, LayoutOrder = 0 })
-local lenButtons = {}
-for i, L in Config.LENGTHS do
-	local b = button({ Parent = lenRow, Text = L == 0 and "∞" or tostring(L), Size = UDim2.new(0.13, 0, 1, 0), LayoutOrder = i, Max = 22 })
-	lenButtons[L] = b
-end
-
-local flushBtn = button({ Parent = T, Text = "▼  FLUSH  ▼", Font = TITLE_FONT, Size = UDim2.new(0.7, 0, 0.11, 0), Position = UDim2.fromScale(0.5, 0.56), AnchorPoint = Vector2.new(0.5, 0), Color = Color3.fromRGB(16, 40, 22), StrokeColor = GREEN, Stroke = 4, Max = 48, TextColor3 = GREEN })
-local rankedBtn = button({ Parent = T, Text = "RANKED", Size = UDim2.new(0.7, 0, 0.075, 0), Position = UDim2.fromScale(0.5, 0.69), AnchorPoint = Vector2.new(0.5, 0), Color = Color3.fromRGB(40, 30, 6), StrokeColor = GOLD, Max = 24, TextColor3 = Color3.fromHex("#ffe27a") })
-local fine = label({ Parent = T, Text = "", Size = UDim2.new(0.86, 0, 0.065, 0), Position = UDim2.fromScale(0.5, 0.765), AnchorPoint = Vector2.new(0.5, 0), Max = 14, TextColor3 = DIM, Font = Enum.Font.GothamMedium })
-fine.BackgroundColor3 = PANEL; fine.BackgroundTransparency = 0.2 -- readable on the light bowl water
-make("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingTop = UDim.new(0, 3), PaddingBottom = UDim.new(0, 3), Parent = fine })
-local row2 = make("Frame", { Parent = T, BackgroundTransparency = 1, Size = UDim2.new(0.7, 0, 0.065, 0), Position = UDim2.fromScale(0.5, 0.85), AnchorPoint = Vector2.new(0.5, 0) }, {
-	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10) }),
-})
-local packsBtn = button({ Parent = row2, Text = "THEMED PACKS", Size = UDim2.new(0.38, 0, 1, 0), Max = 20 })
-local shopBtn = button({ Parent = row2, Text = "SHOP", Size = UDim2.new(0.27, 0, 1, 0), Max = 20 })
-local statsBtn = button({ Parent = row2, Text = "STATS", Size = UDim2.new(0.27, 0, 1, 0), Max = 20 })
-
-local function renderTitle()
-	for L, b in lenButtons do
-		local on = (L == len)
-		b.BackgroundColor3 = on and Color3.fromRGB(60, 120, 70) or Color3.fromRGB(20, 30, 26)
-	end
-	if not profile then return end
-	coinCorner.Text = coinText(profile.coins)
-	local key = tostring(len)
-	local price = profile.prices[key]
-	local L = len == 0 and Config.ENDLESS_RANKED_LENGTH or len
-	local b = profile.boost
-	local tag = b.x > 1 and string.format('  <font color="#7dff6a">%s ×%s</font>', b.why, tostring(b.x)) or ""
-	rankedBtn.Text = string.format("RANKED · %d PROMPTS · %s%s", L, coinText(price), tag)
-	rankedBtn.BackgroundTransparency = profile.coins < price and 0.5 or 0
-	fine.Text = string.format("Ranked: entry spent at start · same price for everyone · score %d+ to profit\nBoosts show on the button · coins are earned in-game, never bought", profile.profitAt[key] or 0)
-	local d = itemById(profile.equip.duck or "")
-	local t = itemById(profile.equip.toilet or "")
-	skinLabel.Text = (d and d.name or "Classic Duck") .. "  ·  " .. (t and t.name or "Classic Toilet")
-	skinLabel.TextColor3 = d and Color3.fromHex(d.color) or DIM
-	Scene.setSkin(profile.equip, ALL_ITEMS)
-end
-for L, b in lenButtons do b.Activated:Connect(function() len = L; renderTitle() end) end
-
----------------------------------------------------------------- PLAY
-local P = screens.play
-local topLeft = label({ Parent = P, Text = "", Size = UDim2.new(0.6, 0, 0.05, 0), TextXAlignment = Enum.TextXAlignment.Left, Max = 20, TextColor3 = DIM })
-stroke(topLeft, 2)
-local scoreLabel = label({ Parent = P, Text = "0", Font = TITLE_FONT, Size = UDim2.new(0.38, 0, 0.07, 0), Position = UDim2.fromScale(1, 0), AnchorPoint = Vector2.new(1, 0), TextXAlignment = Enum.TextXAlignment.Right, Max = 40, TextColor3 = GOLD })
-stroke(scoreLabel, 3)
-local promptLabel = label({ Parent = P, Text = "", Font = BODY_FONT, Size = UDim2.new(1, 0, 0.2, 0), Position = UDim2.fromScale(0, 0.1), Max = 44 })
-stroke(promptLabel, 3)
-local barBack = make("Frame", { Parent = P, Size = UDim2.new(1, 0, 0, 12), Position = UDim2.fromScale(0, 0.33), BackgroundColor3 = PANEL, BorderSizePixel = 0 })
-stroke(barBack, 2, INK)
-local bar = make("Frame", { Parent = barBack, Size = UDim2.fromScale(1, 1), BackgroundColor3 = GREEN, BorderSizePixel = 0 })
-local box = make("TextBox", {
-	Parent = P, Size = UDim2.new(1, 0, 0.1, 0), Position = UDim2.fromScale(0, 0.37), BackgroundColor3 = PANEL, BorderSizePixel = 0,
-	Font = BODY_FONT, TextColor3 = INK, PlaceholderText = "type an answer and press Enter", PlaceholderColor3 = Color3.fromRGB(120, 140, 130),
-	Text = "", TextScaled = true, ClearTextOnFocus = false,
-})
-stroke(box, 3, INK, true); maxText(box, 32)
-local feedback = label({ Parent = P, Text = "", Size = UDim2.new(1, 0, 0.06, 0), Position = UDim2.fromScale(0, 0.49), Max = 22 })
-stroke(feedback, 2)
-local endBtn = button({ Parent = P, Text = "END RUN", Size = UDim2.new(0.25, 0, 0.06, 0), Position = UDim2.fromScale(1, 1), AnchorPoint = Vector2.new(1, 1), Max = 18 })
-
--- reveal card (after you answer or time runs out)
-local reveal = make("Frame", { Parent = P, Size = UDim2.new(1, 0, 0.36, 0), Position = UDim2.fromScale(0, 0.56), BackgroundColor3 = PANEL, BackgroundTransparency = 0.1, BorderSizePixel = 0, Visible = false })
-stroke(reveal, 3, INK)
-local tierLabel = label({ Parent = reveal, Text = "", Font = TITLE_FONT, Size = UDim2.new(1, -20, 0.3, 0), Position = UDim2.new(0, 10, 0.04, 0), Max = 52 })
-local tierIcon = make("Frame", { Parent = reveal, BackgroundTransparency = 1, Size = UDim2.new(0.3, 0, 0.3, 0), Position = UDim2.new(0, 10, 0.04, 0), ZIndex = 2 })
-make("UIAspectRatioConstraint", { Parent = tierIcon })
-stroke(tierLabel, 3)
-local answerLabel = label({ Parent = reveal, Text = "", Size = UDim2.new(1, -20, 0.17, 0), Position = UDim2.new(0, 10, 0.34, 0), Max = 26 })
-local blurbLabel = label({ Parent = reveal, Text = "", Size = UDim2.new(1, -20, 0.12, 0), Position = UDim2.new(0, 10, 0.51, 0), Max = 18, TextColor3 = DIM, Font = Enum.Font.Gotham })
-local othersLabel = label({ Parent = reveal, Text = "", Size = UDim2.new(1, -20, 0.14, 0), Position = UDim2.new(0, 10, 0.64, 0), Max = 16, TextColor3 = DIM, Font = Enum.Font.Gotham })
-local nextBtn = button({ Parent = reveal, Text = "NEXT ▶", Size = UDim2.new(0.3, 0, 0.17, 0), Position = UDim2.new(0.5, 0, 0.97, 0), AnchorPoint = Vector2.new(0.5, 1), Max = 22, Color = Color3.fromRGB(40, 120, 50), StrokeColor = GREEN, TextColor3 = INK })
-
-local game_ = nil -- {ranked, total, deadline, seconds, phase}
-local pendingSuggest = nil
-
-local function showPrompt(pv)
-	game_.phase = "answering"
-	game_.total = pv.total
-	game_.seconds = pv.seconds
-	game_.deadline = os.clock() + pv.seconds
-	topLeft.Text = (pv.ranked and "RANKED · " or pv.packName and (string.upper(pv.packName) .. " · ") or "") .. (pv.total and string.format("PROMPT %d OF %d", pv.idx, pv.total) or string.format("PROMPT %d · ENDLESS", pv.idx))
-	scoreLabel.Text = tostring(pv.score)
-	promptLabel.Text = pv.prompt
-	feedback.Text = ""
-	reveal.Visible = false
-	box.Text = ""
-	box.TextEditable = true
-	endBtn.Visible = (pv.total == nil)
-	pendingSuggest = nil
-	show("play")
-	task.defer(function() box:CaptureFocus() end)
-end
-
-local function showReveal(res)
-	game_.phase = "reveal"
-	box.TextEditable = false
-	box:ReleaseFocus()
-	scoreLabel.Text = tostring(res.total)
-	if res.result == "hit" then
-		local t = Match.tierOf(res.score)
-		tierLabel.Text = string.upper(t.name) .. "  +" .. res.score
-		tierLabel.TextColor3 = t.color
-		answerLabel.Text = res.answer .. ((res.official and res.official ~= res.answer) and ("  (" .. res.official .. ")") or "")
-		blurbLabel.Text = t.blurb
-		play(res.score >= 85 and "flush" or "correct")
-	else
-		tierLabel.Text = "TIME'S UP  +0"
-		tierLabel.TextColor3 = RED
-		answerLabel.Text = "The duck stays put."
-		blurbLabel.Text = ""
-		play("miss")
-	end
-	local rv = res.reveal or {}
-	local parts = {}
-	if rv.common and #rv.common > 0 then table.insert(parts, "Most said: " .. table.concat(rv.common, ", ")) end
-	if rv.sigma then table.insert(parts, "Sigma answer: " .. rv.sigma) end
-	othersLabel.Text = table.concat(parts, "   ·   ")
-	nextBtn.Text = res.last and "RESULTS ▶" or "NEXT ▶"
-	reveal.Visible = true
-	if res.result == "hit" then Scene.sink(res.score) end
-	for _, c in tierIcon:GetChildren() do c:Destroy() end
-	if res.result == "hit" then
-		local ico = Scene.tierIcon(res.score, math.max(48, tierIcon.AbsoluteSize.Y))
-		ico.AnchorPoint = Vector2.new(0.5, 0.5); ico.Position = UDim2.fromScale(0.5, 0.5); ico.Parent = tierIcon
-	end
-end
-
----------------------------------------------------------------- RESULTS
-local R = screens.results
-local resTitle = label({ Parent = R, Text = "", Font = TITLE_FONT, Size = UDim2.new(1, 0, 0.08, 0), Max = 40, TextColor3 = GOLD })
-stroke(resTitle, 3)
-local resScore = label({ Parent = R, Text = "", Font = TITLE_FONT, Size = UDim2.new(1, 0, 0.13, 0), Position = UDim2.fromScale(0, 0.08), Max = 90 })
-stroke(resScore, 4)
-local resPct = label({ Parent = R, Text = "", Size = UDim2.new(1, 0, 0.05, 0), Position = UDim2.fromScale(0, 0.21), Max = 22 })
-stroke(resPct, 2)
-local resCoins = label({ Parent = R, Text = "", Size = UDim2.new(1, 0, 0.05, 0), Position = UDim2.fromScale(0, 0.26), Max = 22, TextColor3 = GOLD })
-stroke(resCoins, 2)
-local resList = make("ScrollingFrame", { Parent = R, Size = UDim2.new(1, 0, 0.52, 0), Position = UDim2.fromScale(0, 0.33), BackgroundColor3 = PANEL, BackgroundTransparency = 0.15, BorderSizePixel = 0, ScrollBarThickness = 8, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new() }, {
-	make("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
-	make("UIPadding", { PaddingTop = UDim.new(0, 8), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 14) }),
-})
-stroke(resList, 2, INK)
-local resRow = make("Frame", { Parent = R, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.09, 0), Position = UDim2.fromScale(0, 0.88) }, {
-	make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 12) }),
-})
-local againBtn = button({ Parent = resRow, Text = "PLAY AGAIN", Size = UDim2.new(0.4, 0, 1, 0), Max = 24, StrokeColor = GREEN, TextColor3 = GREEN })
-local homeBtn = button({ Parent = resRow, Text = "HOME", Size = UDim2.new(0.25, 0, 1, 0), Max = 24 })
-
-local function showResults(res)
-	game_ = nil
-	if res.profile then profile = res.profile end
-	local n = res.prompts
-	resTitle.Text = res.packName and (string.upper(res.packName) .. " PACK COMPLETE") or res.ranked and string.format("RANKED %d-PROMPT FLUSH", n) or string.format("%d-PROMPT FLUSH COMPLETE", n)
-	resScore.Text = tostring(res.score)
-	resPct.Text = string.format("Better than %d%% of players", res.percentile)
-	if res.cheated then
-		resCoins.Text = "Test code used · no coins this time"
-	elseif res.ranked then
-		resCoins.Text = "Paid out " .. coinText(res.paid)
-		resCoins.TextColor3 = res.paid > (res.price or 0) and GREEN or GOLD
-	else
-		resCoins.Text = "+" .. coinText(res.paid) .. " earned · play Ranked to win more"
-		resCoins.TextColor3 = GOLD
-	end
-	for _, c in resList:GetChildren() do if c:IsA("Frame") then c:Destroy() end end
-	for i, r in res.rows do
-		local t = Match.tierOf(r.score)
-		local f = make("Frame", { Parent = resList, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 46), LayoutOrder = i })
-		if r.score > 0 then local ico = Scene.tierIcon(r.score, 40); ico.Position = UDim2.fromOffset(0, 3); ico.Parent = f end
-		label({ Parent = f, Text = r.prompt, Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromOffset(48, 0), TextXAlignment = Enum.TextXAlignment.Left, Max = 16, Font = Enum.Font.Gotham })
-		label({ Parent = f, Text = r.answer, Size = UDim2.new(0.28, 0, 1, 0), Position = UDim2.fromScale(0.56, 0), TextXAlignment = Enum.TextXAlignment.Left, Max = 16 })
-		local s = label({ Parent = f, Text = r.score > 0 and (t.name .. " +" .. r.score) or "+0", Size = UDim2.new(0.16, 0, 1, 0), Position = UDim2.fromScale(0.84, 0), TextXAlignment = Enum.TextXAlignment.Right, Max = 16, Font = TITLE_FONT })
-		s.TextColor3 = r.score > 0 and t.color or RED
-	end
-	renderTitle()
-	show("results")
-end
-
----------------------------------------------------------------- game actions
-local function startGame(mode, packKey)
-	local res = call("start", { mode = mode, len = len, pack = packKey })
-	if not res then return end
-	lastMode, lastPack = mode, packKey
-	game_ = { ranked = mode == "ranked" }
-	if profile then profile.coins = res.coins; coinCorner.Text = coinText(res.coins) end
-	if res.extraTime then toast("Extra Time boost: +5s every prompt") end
-	play("flush")
-	show("none") -- hide the menus while the duck gets flushed
-	Scene.flush(function() showPrompt(res.prompt) end)
-end
-
-local function submit()
-	if not game_ or game_.phase ~= "answering" then return end
-	local text = box.Text
-	if text:match("^%s*$") then return end
-	local res = call("submit", { text = text })
-	if not res then return end
-	if res.result == "hit" or res.result == "timeout" then
-		showReveal(res)
-	elseif res.result == "suggest" then
-		pendingSuggest = res.label
-		box.Text = res.label
-		feedback.Text = string.format('Did you mean <b>"%s"</b>? Press Enter to lock it in.', res.label)
-		feedback.TextColor3 = GOLD
-		task.defer(function() box:CaptureFocus(); box.CursorPosition = #box.Text + 1 end)
-	elseif res.result == "miss" then
-		feedback.Text = string.format('"%s" isn\'t on the list. Try another!', text)
-		feedback.TextColor3 = RED
-		play("miss")
-		box.Text = ""
-		task.defer(function() box:CaptureFocus() end)
-	end
-end
-
-local function goNext()
-	if not game_ or game_.phase ~= "reveal" then return end
-	local res = call("next")
-	if not res then return end
-	if res.done then showResults(res) else showPrompt(res.prompt) end
-end
-
-box.FocusLost:Connect(function(enter) if enter then submit() end end)
-nextBtn.Activated:Connect(goNext)
-UserInputService.InputBegan:Connect(function(input, processed)
-	if processed then return end
-	if input.KeyCode == Enum.KeyCode.Return and game_ and game_.phase == "reveal" then goNext() end
-end)
-endBtn.Activated:Connect(function()
-	local res = call("endRun")
-	if res then showResults(res) end
-end)
-
--- the clock
-local timingOut = false
-RunService.Heartbeat:Connect(function()
-	if not game_ or game_.phase ~= "answering" then return end
-	local left = game_.deadline - os.clock()
-	local frac = math.clamp(left / game_.seconds, 0, 1)
-	bar.Size = UDim2.fromScale(frac, 1)
-	bar.BackgroundColor3 = frac > 0.4 and GREEN or frac > 0.15 and GOLD or RED
-	if left <= 0 and not timingOut then
-		timingOut = true
-		task.spawn(function()
-			local res
-			for _ = 1, 5 do
-				res = call("timeout")
-				if res then break end
-				task.wait(0.4)
-			end
-			timingOut = false
-			if res and res.result then showReveal(res) end
-		end)
-	end
-end)
-
-flushBtn.Activated:Connect(function() startGame("free") end)
-rankedBtn.Activated:Connect(function() startGame("ranked") end)
-againBtn.Activated:Connect(function() startGame(lastMode, lastPack) end)
-homeBtn.Activated:Connect(function() Scene.title(); show("title") end)
-
----------------------------------------------------------------- SHOP + STATS (modal)
-local modal = make("Frame", { Parent = gui, Size = UDim2.fromScale(0.86, 0.8), Position = UDim2.fromScale(0.5, 0.52), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = PANEL, BorderSizePixel = 0, Visible = false, ZIndex = 20 })
-stroke(modal, 3, INK)
-local modalTitle = label({ Parent = modal, Text = "", Font = TITLE_FONT, Size = UDim2.new(1, -120, 0, 44), Position = UDim2.new(0, 16, 0, 10), TextXAlignment = Enum.TextXAlignment.Left, Max = 36, ZIndex = 21, TextColor3 = GOLD })
-local closeBtn = button({ Parent = modal, Text = "✕", Size = UDim2.new(0, 44, 0, 44), Position = UDim2.new(1, -12, 0, 10), AnchorPoint = Vector2.new(1, 0), Max = 24, ZIndex = 21 })
-local modalBody = make("ScrollingFrame", { Parent = modal, Size = UDim2.new(1, -24, 1, -70), Position = UDim2.new(0, 12, 0, 62), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 8, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 21 })
-closeBtn.Activated:Connect(function() modal.Visible = false end)
-
-local function clearBody()
-	for _, c in modalBody:GetChildren() do c:Destroy() end
-end
-local function rarity(p)
-	if p >= 100000 then return "MYTHIC", Color3.fromHex("#ff7ad9") end
-	if p >= 10000 then return "LEGENDARY", GOLD end
-	if p >= 500 then return "RARE", Color3.fromHex("#6fc8ff") end
-	return "COMMON", DIM
-end
-
-local openShop
-openShop = function()
-	if not profile then return end
-	clearBody()
-	modalTitle.Text = "SHOP  ·  " .. coinText(profile.coins)
-	make("UIGridLayout", { Parent = modalBody, CellSize = UDim2.new(0.31, 0, 0, 130), CellPadding = UDim2.new(0.02, 0, 0, 10), SortOrder = Enum.SortOrder.LayoutOrder })
-	local items = table.clone(Config.SHOP)
-	for _, s in Config.ROBUX_PASSES do if s.passId > 0 then table.insert(items, s) end end
-	table.sort(items, function(a, b) return (a.price or 1e12) < (b.price or 1e12) end)
-	for i, s in items do
-		local card = make("Frame", { Parent = modalBody, BackgroundColor3 = Color3.fromRGB(22, 30, 27), BorderSizePixel = 0, LayoutOrder = i, ZIndex = 22 })
-		local rName, rColor = rarity(s.price or 0)
-		stroke(card, 2, s.passId and Color3.fromHex("#39ff14") or rColor)
-		local holder = make("Frame", { Parent = card, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0.32, 0), ZIndex = 23 })
-		local pv
-		if s.type == "duck" then pv = Scene.pixel("duck0", 3, { tint = s.fx ~= "rainbow" and s.color or "#ff7ad9", z = 23 })
-		elseif s.type == "toilet" then pv = Scene.pixel(s.sprite or "toilet", 3, { tint = not s.sprite and s.color or nil, z = 23 })
-		elseif s.type == "trail" then
-			pv = make("Frame", { BackgroundTransparency = 1, Size = UDim2.fromOffset(42, 30), ZIndex = 23 })
-			for k = 0, 5 do make("Frame", { Parent = pv, BorderSizePixel = 0, BackgroundColor3 = Color3.fromHex(s.color), BackgroundTransparency = k * 0.14, Size = UDim2.fromOffset(42 - k * 6, 4), Position = UDim2.fromOffset(k * 3, k * 5), ZIndex = 23 }) end
-		else pv = label({ Text = "⏱️", Size = UDim2.fromOffset(40, 36), Max = 30, ZIndex = 23 }) end
-		pv.AnchorPoint = Vector2.new(0.5, 0.5); pv.Position = UDim2.fromScale(0.5, 0.5); pv.Parent = holder
-		label({ Parent = card, Text = s.name, Size = UDim2.new(1, -10, 0.2, 0), Position = UDim2.new(0, 5, 0.32, 0), Max = 16, ZIndex = 23 })
-		local rl = label({ Parent = card, Text = s.passId and "ROBUX PASS" or rName, Size = UDim2.new(1, 0, 0.12, 0), Position = UDim2.fromScale(0, 0.52), Max = 12, ZIndex = 23, Font = TITLE_FONT })
-		rl.TextColor3 = s.passId and Color3.fromHex("#39ff14") or rColor
-		local owned = profile.owned[s.id]
-		local equipped = profile.equip[s.type] == s.id
-		local text
-		if s.type == "boost" then text = "BUY " .. coinText(s.price) .. "  (have " .. tostring(profile.boosts.time or 0) .. ")"
-		elseif equipped then text = "EQUIPPED"
-		elseif owned then text = "EQUIP"
-		elseif s.passId then text = "BUY WITH ROBUX"
-		else text = "BUY " .. coinText(s.price) end
-		local b = button({ Parent = card, Text = text, Size = UDim2.new(1, -12, 0.28, 0), Position = UDim2.new(0, 6, 0.68, 0), Max = 15, ZIndex = 23, Stroke = 2 })
-		if not owned and s.price and profile.coins < s.price then b.BackgroundTransparency = 0.6 end
-		b.Activated:Connect(function()
-			local res
-			if s.passId and not owned then res = call("buyPass", { id = s.id })
-			elseif owned then res = call("equip", { id = s.id })
-			else res = call("buy", { id = s.id }) end
-			if res and res.coins then profile = res; renderTitle(); openShop() end
-		end)
-	end
-	modal.Visible = true
-end
-
-local function openPacks()
-	if not profile then return end
-	clearBody()
-	modalTitle.Text = "THEMED PACKS"
-	make("UIListLayout", { Parent = modalBody, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
-	label({ Parent = modalBody, Text = string.format("One topic, easy to hard. %s prompts. Free to play, pays like a normal game.", len == 0 and "Endless" or tostring(len)), Size = UDim2.new(1, 0, 0, 28), Max = 16, TextColor3 = DIM, ZIndex = 23, LayoutOrder = 0, Font = Enum.Font.Gotham })
-	for i, pk in profile.packs do
-		local b = button({ Parent = modalBody, Text = "", Size = UDim2.new(1, -12, 0, 70), LayoutOrder = i, ZIndex = 22, Stroke = 2 })
-		local nm = label({ Parent = b, Text = string.format("%02d  %s", i, string.upper(pk.name)), Size = UDim2.new(0.62, 0, 0.5, 0), TextXAlignment = Enum.TextXAlignment.Left, Font = TITLE_FONT, Max = 24, ZIndex = 23, TextColor3 = GOLD })
-		label({ Parent = b, Text = pk.blurb, Size = UDim2.new(0.62, 0, 0.45, 0), Position = UDim2.fromScale(0, 0.52), TextXAlignment = Enum.TextXAlignment.Left, Max = 14, ZIndex = 23, TextColor3 = DIM, Font = Enum.Font.Gotham })
-		label({ Parent = b, Text = pk.count .. " PROMPTS" .. (pk.best and ("  ·  BEST " .. pk.best) or ""), Size = UDim2.new(0.36, 0, 1, 0), Position = UDim2.fromScale(0.64, 0), TextXAlignment = Enum.TextXAlignment.Right, Max = 16, ZIndex = 23 })
-		b.Activated:Connect(function() modal.Visible = false; startGame("pack", pk.key) end)
-		local _ = nm
-	end
-	modal.Visible = true
-end
-
-local function openStats()
-	if not profile then return end
-	clearBody()
-	modalTitle.Text = "STATS"
-	make("UIListLayout", { Parent = modalBody, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder })
-	local st = profile.stats
-	local lines = {
-		{ "Games played", tostring(st.games) },
-		{ "Best score", tostring(st.best) },
-		{ "Average per prompt", tostring(st.avg) },
-		{ "Coins", coinText(profile.coins) },
-	}
-	for _, t in Match.TIERS do table.insert(lines, { t.name .. " answers", tostring(st.tiers[tostring(t.score)] or 0), t.color }) end
-	for i, l in lines do
-		local f = make("Frame", { Parent = modalBody, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 40), LayoutOrder = i, ZIndex = 22 })
-		local a = label({ Parent = f, Text = l[1], Size = UDim2.new(0.6, 0, 1, 0), TextXAlignment = Enum.TextXAlignment.Left, Max = 22, ZIndex = 23 })
-		if l[3] then a.TextColor3 = l[3] end
-		label({ Parent = f, Text = l[2], Size = UDim2.new(0.4, 0, 1, 0), Position = UDim2.fromScale(0.6, 0), TextXAlignment = Enum.TextXAlignment.Right, Max = 22, ZIndex = 23, Font = TITLE_FONT })
-	end
-	modal.Visible = true
-end
-shopBtn.Activated:Connect(openShop)
-packsBtn.Activated:Connect(openPacks)
-statsBtn.Activated:Connect(openStats)
-
----------------------------------------------------------------- boot
-show("title")
-renderTitle()
-coinCorner.Text = "loading…"
+-- Roblox's own chat / player list / backpack would sit on top of the game: hide them (the Roblox menu stays)
 task.spawn(function()
 	for _ = 1, 20 do
-		local res = call("profile")
-		if res then profile = res; renderTitle(); return end
+		if pcall(StarterGui.SetCoreGuiEnabled, StarterGui, Enum.CoreGuiType.All, false) then break end
 		task.wait(0.5)
 	end
-	toast("Couldn't load your profile. Rejoin to try again.")
+end)
+
+---------------------------------------------------------------- pixel images (EditableImage, with a Frames fallback)
+local imagesOk = true
+local function frameImage(w, h)
+	-- fallback when Roblox won't give us an EditableImage: the buffer drawn as runs of Frames
+	local obj = {}
+	function obj:write(buf) self.buf = buf end
+	function obj:label()
+		local holder = Instance.new("Frame")
+		holder.BackgroundTransparency = 1
+		local buf = self.buf
+		if buf then
+			for y = 0, h - 1 do
+				local x0, key = nil, nil
+				for x = 0, w do
+					local k = nil
+					if x < w then
+						local v = buffer.readu32(buf, (y * w + x) * 4)
+						if v >= 0x10000000 then k = v end
+					end
+					if k ~= key then
+						if key then
+							local f = Instance.new("Frame")
+							f.BorderSizePixel = 0
+							f.BackgroundColor3 = Color3.fromRGB(key % 256, (key // 256) % 256, (key // 65536) % 256)
+							f.BackgroundTransparency = 1 - (key // 16777216) / 255
+							f.Position = UDim2.fromOffset(x0, y); f.Size = UDim2.fromOffset(x - x0, 1)
+							f.Parent = holder
+						end
+						x0, key = x, k
+					end
+				end
+			end
+		end
+		return holder
+	end
+	return obj
+end
+Kit.makeImage = function(w, h)
+	if imagesOk then
+		local ok, ei = pcall(function() return AssetService:CreateEditableImage({ Size = Vector2.new(w, h) }) end)
+		if ok and ei then
+			local obj = {}
+			function obj:write(buf) ei:WritePixelsBuffer(Vector2.zero, Vector2.new(w, h), buf) end
+			function obj:label(smooth)
+				local l = Instance.new("ImageLabel")
+				l.BackgroundTransparency = 1
+				l.BorderSizePixel = 0
+				l.ImageContent = Content.fromObject(ei)
+				l.ResampleMode = smooth and Enum.ResamplerMode.Default or Enum.ResamplerMode.Pixelated
+				l.Destroying:Connect(function() ei:Destroy() end)
+				return l
+			end
+			return obj
+		elseif not ok and tostring(ei):find("permission") then
+			imagesOk = false
+			warn("[FLUSHED] EditableImage is off for this game. Turn on Game Settings > Security > Allow Mesh / Image APIs (the creator must be ID-verified, 13+). Using a slower fallback.")
+		end
+	end
+	return frameImage(w, h)
+end
+
+-- small text is drawn at 2x and smoothed down so thin strokes never vanish (and stays sharp on phones' dense screens)
+Kit.smallTextScale = 2
+Kit.minTextSize = 10 -- nothing smaller than 10px: every line of fine print stays readable
+
+---------------------------------------------------------------- screen guis
+local pg = player:WaitForChild("PlayerGui")
+local sceneGui = Instance.new("ScreenGui")
+sceneGui.Name = "FlushedScene"; sceneGui.IgnoreGuiInset = true; sceneGui.ResetOnSpawn = false; sceneGui.DisplayOrder = 0
+sceneGui.ScreenInsets = Enum.ScreenInsets.None
+sceneGui.Parent = pg
+local gui = Instance.new("ScreenGui")
+gui.Name = "Flushed"; gui.IgnoreGuiInset = true; gui.ResetOnSpawn = false; gui.DisplayOrder = 1
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+gui.ScreenInsets = Enum.ScreenInsets.DeviceSafeInsets
+gui.Parent = pg
+
+-- background colour under everything (the website's body: #14201a)
+local bg = Instance.new("Frame")
+bg.BackgroundColor3 = hex("#14201a"); bg.BorderSizePixel = 0; bg.Size = UDim2.fromScale(1, 1); bg.Parent = sceneGui
+local sceneLabel = Instance.new("ImageLabel")
+sceneLabel.Name = "Ocean"; sceneLabel.BackgroundTransparency = 1; sceneLabel.Size = UDim2.fromScale(1, 1)
+sceneLabel.ResampleMode = Enum.ResamplerMode.Pixelated; sceneLabel.Parent = sceneGui
+local sceneImg, sceneW, sceneH = nil, 0, 0
+
+local function layer(name, z, class)
+	local f = Instance.new(class or "Frame")
+	f.Name = name; f.BackgroundTransparency = 1; f.Size = UDim2.fromScale(1, 1); f.ZIndex = z
+	f.Parent = gui
+	return f
+end
+local screenRoot = layer("Screen", 1)
+local chromeRoot = layer("Chrome", 2)
+local overlayRoot = layer("Overlay", 3, "CanvasGroup") -- a CanvasGroup so menus can fade in as one
+local toastRoot = layer("Toast", 4)
+
+---------------------------------------------------------------- state
+local S = {
+	screen = "title", len = 10, profile = nil, muted = false,
+	settings = { sound = true, ambience = false, reduced = false, showMeta = false },
+	overlay = nil, -- function that (re)builds the open overlay
+	results = nil, resultsScroll = 0,
+}
+local G = nil -- the running game
+local gameUI = nil
+local busy = false
+local function nowMs() return os.clock() * 1000 end
+
+local function call(action, args)
+	local ok, res = pcall(function() return remote:InvokeServer(action, args or {}) end)
+	if not ok then return { error = "Connection problem. Try again." } end
+	return res or { error = "No answer from the server." }
+end
+
+local function clear(f) for _, c in f:GetChildren() do c:Destroy() end end
+-- toasts slide up 20px and fade in (like the website's .toast transition), then slide back down and fade out
+local toastSeq = 0
+local function toast(msg)
+	clear(toastRoot)
+	toastSeq += 1
+	local my = toastSeq
+	local cg = Instance.new("CanvasGroup")
+	cg.BackgroundTransparency = 1; cg.Size = UDim2.fromScale(1, 1); cg.GroupTransparency = 1
+	cg.Position = UDim2.fromOffset(0, 20)
+	cg.Parent = toastRoot
+	local box = Panels.toast(cg, msg)
+	local info = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	TweenService:Create(cg, info, { GroupTransparency = 0, Position = UDim2.fromOffset(0, 0) }):Play()
+	task.delay(2.4, function()
+		if my ~= toastSeq then return end
+		local t = TweenService:Create(cg, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { GroupTransparency = 1, Position = UDim2.fromOffset(0, 20) })
+		t:Play()
+		t.Completed:Wait()
+		if my == toastSeq then cg:Destroy() end
+	end)
+	return box
+end
+
+---------------------------------------------------------------- sounds: slices of one sound file (Config.SFX_ID)
+local sfxTemplate = nil
+if Config.SFX_ID ~= "" then
+	sfxTemplate = Instance.new("Sound")
+	sfxTemplate.SoundId = Config.SFX_ID
+	sfxTemplate.Volume = 0.8
+	sfxTemplate.PlaybackRegionsEnabled = true
+	sfxTemplate.Parent = SoundService
+	task.spawn(function() pcall(function() game:GetService("ContentProvider"):PreloadAsync({ sfxTemplate }) end) end)
+end
+local function play(name, length)
+	if not sfxTemplate or not S.settings.sound or S.muted then return end
+	local slot = Config.SOUND_SLOTS[name]
+	if not slot then return end
+	local s = sfxTemplate:Clone()
+	s.PlaybackRegion = NumberRange.new(slot * 4, slot * 4 + (length or 3.95))
+	s.Parent = SoundService
+	s:Play()
+	task.delay((length or 3.95) + 0.2, function() s:Destroy() end)
+end
+
+---------------------------------------------------------------- profile helpers
+local function coins() return S.profile and S.profile.coins or 0 end
+local function rankedLen() return S.len == 0 and Config.ENDLESS_RANKED_LENGTH or S.len end
+local function price() return S.profile and S.profile.prices and S.profile.prices[tostring(rankedLen())] or 0 end
+local function boost() return S.profile and S.profile.boost or { x = 1, why = "" } end
+local function shopItem(id) for _, s in Config.SHOP do if s.id == id then return s end end return nil end
+local function applySkin()
+	local eq = S.profile and S.profile.equip or {}
+	local d, t, tr = shopItem(eq.duck or "") or {}, shopItem(eq.toilet or "") or {}, shopItem(eq.trail or "") or {}
+	Ocean.setSkin({ duckTint = d.fx == "rainbow" and nil or d.tint, duckFx = d.fx, toiletSprite = t.sprite, toiletTint = t.tint, toiletFx = t.fx, trail = tr.trail })
+end
+local function setProfile(p)
+	if not p or p.error then return end
+	S.profile = p
+	applySkin()
+end
+
+---------------------------------------------------------------- chrome: menu button, sound / settings rail, coin corner
+local render -- forward
+local openMenu, openSettings, openStats, openShop, openHelp, openPlayAgain, showTitle, showPacks
+local function railButton(parent, x, y, icon, fn)
+	local b = Kit.box(parent, x, y, 40, 40, { bg = rgb(22, 32, 22), bgA = 0.78, border = 1, bc = rgb(167, 187, 163), bcA = 0.25 })
+	Kit.icon(b, icon, 10, 10, 20, hex("#f2f8fc"), 1)
+	Panels.hit(b, 0, 0, 40, 40, fn)
+	return b
+end
+-- Roblox draws its own menu button in the top-left corner: keep ours just below it when they'd overlap
+local function topbarBottom()
+	local ok, r = pcall(function() return GuiService.TopbarInset end)
+	if ok and r and r.Height > 0 then return r.Max.Y end
+	return 0
+end
+local function buildChrome()
+	clear(chromeRoot)
+	local W, H = Css.W, Css.H
+	local scr = S.screen
+	local narrow, xs = W <= 760, W <= 700
+	local top = Css.clamp(10, Css.vh(2.4), 26)
+	local side = Css.clamp(8, Css.vw(1.4), 20)
+	if scr ~= "game" then
+		local ly = math.max(top, topbarBottom() + 6)
+		railButton(chromeRoot, side, ly, "menu", function() openMenu() end)
+	end
+	if scr ~= "title" and scr ~= "game" then
+		local x, y = W - side - 40, top
+		railButton(chromeRoot, x, y, S.muted and "mute" or "sound", function() S.muted = not S.muted; render() end)
+		if narrow then x -= 44 else y += 44 end
+		railButton(chromeRoot, x, y, "gear", function() openSettings() end)
+	end
+	-- coin balance (earned coins; looks in the shop cost Robux)
+	if scr == "game" and xs then return end
+	local f = xs and 13.6 or 16
+	local h = xs and 30 or 36
+	local cw = Panels.coinW(coins(), f)
+	local w = cw + 2 * 0.8 * f + 4
+	local x = W - (xs and 8 or 12) - w
+	local y = xs and 8 or 12
+	if scr == "results" or scr == "packs" then x = W - 64 - w end
+	if scr == "game" then y = H - 12 - h end
+	local box = Kit.box(chromeRoot, x, y, w, h, { bg = rgb(10, 14, 12), bgA = 0.85, border = 2, bc = rgb(255, 255, 255), bcA = 0.55 })
+	Panels.coinTag(box, 2 + 0.8 * f, 0, coins(), f, rgb(255, 255, 255), 0, false, h - 4 + 2)
+end
+
+---------------------------------------------------------------- overlays
+local function closeOverlay()
+	S.overlay = nil
+	for _, c in overlayRoot:GetChildren() do if not c:IsA("UIScale") then c:Destroy() end end
+end
+overlayRoot.AnchorPoint = Vector2.new(0.5, 0.5); overlayRoot.Position = UDim2.fromScale(0.5, 0.5)
+local overlayScale = Instance.new("UIScale"); overlayScale.Parent = overlayRoot
+local function openOverlay(builder)
+	local fresh = S.overlay == nil
+	S.overlay = builder
+	for _, c in overlayRoot:GetChildren() do if not c:IsA("UIScale") then c:Destroy() end end
+	builder()
+	if fresh and not S.settings.reduced then -- fade + settle in (website: .15s fade, .2s pop)
+		overlayRoot.GroupTransparency = 1; overlayScale.Scale = 0.97
+		local info = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TweenService:Create(overlayRoot, info, { GroupTransparency = 0 }):Play()
+		TweenService:Create(overlayScale, info, { Scale = 1 }):Play()
+	else
+		overlayRoot.GroupTransparency = 0; overlayScale.Scale = 1
+	end
+end
+
+openHelp = function() openOverlay(function() Panels.help(overlayRoot, { onClose = closeOverlay }) end) end
+openSettings = function()
+	openOverlay(function()
+		Panels.settings(overlayRoot, { sound = S.settings.sound and not S.muted, ambience = S.settings.ambience, reduced = S.settings.reduced, showMeta = S.settings.showMeta,
+			prompts = S.profile and S.profile.bankPrompts or 0, answers = S.profile and S.profile.bankAnswers or 0 }, {
+			onClose = closeOverlay,
+			onToggle = function(k, v)
+				if k == "sound" then S.settings.sound = v; S.muted = false else S.settings[k] = v end
+				if k == "reduced" then Ocean.setReduced(v) end
+				openSettings(); buildChrome()
+			end,
+		})
+	end)
+end
+openStats = function()
+	local p = call("profile")
+	setProfile(p)
+	local st = (S.profile and S.profile.stats) or {}
+	local bins, tiers = {}, {}
+	for i = 1, 10 do bins[i] = (st.bins or {})[tostring(i)] or 0 end
+	for k, v in st.tiers or {} do tiers[tonumber(k)] = v end
+	openOverlay(function()
+		Panels.stats(overlayRoot, { games = st.games, best = st.best, avg = st.avg, avgPer = st.avgPer, deepest = st.deepest, answeredPct = st.answeredPct, bins = bins, tiers = tiers }, {
+			onClose = closeOverlay,
+			onReset = function() toast("Stats live on the server. Ask the game owner to reset them.") end,
+		})
+	end)
+end
+openShop = function()
+	openOverlay(function()
+		local p = S.profile or {}
+		local items, any = {}, false
+		for _, it in Config.SHOP do
+			local d = table.clone(it)
+			d.robux = it.type ~= "boost"
+			d.owned = (p.owned or {})[it.id] and true or false
+			d.equipped = d.owned and (p.equip or {})[it.type] == it.id
+			if d.owned then any = true end
+			d.preview = it.type == "toilet" and (it.sprite or "toilet") or "duck0"
+			d.ph = it.type == "toilet" and 15 or 13
+			d.tint = it.fx == "rainbow" and "~#ff7ad9" or it.tint
+			table.insert(items, d)
+		end
+		local _, _, box = Panels.shop(overlayRoot, { coins = coins(), items = items, boosts = (p.boosts or {}).time or 0, anyOwned = any }, {
+			onClose = closeOverlay,
+			onBuy = function(id)
+				local it = shopItem(id)
+				if not it then return end
+				if it.type == "boost" then
+					local r = call("buy", { id = id })
+					if r.error then toast(r.error) else setProfile(r); play("buy"); openShop(); buildChrome() end
+				else
+					local r = call("buyRobux", { id = id })
+					if r.error then toast(r.error) end
+				end
+			end,
+			onEquip = function(id)
+				local r = call("equip", { id = id })
+				if r.error then toast(r.error) else setProfile(r); openShop() end
+			end,
+			onDefault = function()
+				for _, t in { "duck", "toilet", "trail" } do
+					local cur = S.profile and S.profile.equip and S.profile.equip[t]
+					if cur then setProfile(call("equip", { id = cur })) end
+				end
+				openShop()
+			end,
+		})
+		if S.shopScroll and box then box.CanvasPosition = S.shopScroll end
+		if box then box:GetPropertyChangedSignal("CanvasPosition"):Connect(function() S.shopScroll = box.CanvasPosition end) end
+	end)
+end
+openPlayAgain = function()
+	openOverlay(function()
+		Panels.playAgain(overlayRoot, { len = S.len, price = price(), coins = coins(), boost = boost() }, {
+			onClose = closeOverlay,
+			onLen = function(n) S.len = n; openPlayAgain() end,
+			onFlush = function() closeOverlay(); S.startGame("unlimited") end,
+			onRanked = function() closeOverlay(); S.startGame("ranked") end,
+		})
+	end)
+end
+local function confirm(msg, fn)
+	openOverlay(function() Panels.confirm(overlayRoot, msg, function() closeOverlay(); fn() end, closeOverlay) end)
+end
+openMenu = function()
+	openOverlay(function()
+		local items = {
+			{ label = "HOME", icon = "home", act = "home" }, { label = "PLAY", icon = "play", act = "unlimited" }, { label = "THEMED PACKS", icon = "cube", act = "packs" },
+			{ label = "SHOP", icon = "cube", act = "shop" }, { label = "STATISTICS", icon = "chart", act = "stats" }, { label = "SETTINGS", icon = "gear", act = "settings" },
+			{ label = "HOW TO PLAY", icon = "help", act = "help" },
+		}
+		if G then table.insert(items, { label = "QUIT FLUSH", icon = "close", act = "quit", danger = true }) end
+		local active = S.screen == "title" and "home" or S.screen == "packs" and "packs" or (S.screen == "game" and "unlimited") or nil
+		local total = 0
+		for _, pk in (S.profile and S.profile.packs) or {} do total += pk.count or 0 end
+		Panels.menu(overlayRoot, items, active, total > 0 and (fmt(S.profile.bankPrompts or total) .. " prompts in the deep") or "", function(act)
+			closeOverlay()
+			if act == "home" then showTitle()
+			elseif act == "unlimited" then if G then render() else S.startGame("unlimited") end
+			elseif act == "packs" then showPacks()
+			elseif act == "shop" then openShop()
+			elseif act == "stats" then openStats()
+			elseif act == "settings" then openSettings()
+			elseif act == "help" then openHelp()
+			elseif act == "quit" then S.quit() end
+		end, closeOverlay)
+	end)
+end
+
+---------------------------------------------------------------- the game
+local INTRO = Config.INTRO_SECONDS
+local function promptLabel()
+	local r = G.ranked and "RANKED · " or ""
+	if G.len > 0 then return string.format("%sPROMPT %d OF %d", r, G.idx, G.len) end
+	return string.format("PROMPT %d · ENDLESS", G.idx)
+end
+local function renderHud(depthShown)
+	if not (G and gameUI) then return end
+	gameUI:setHud(depthShown or G.shownDepth or G.depth, G.score)
+	local pips = {}
+	local from, to = 1, G.len
+	if G.len == 0 then from = math.max(1, G.idx - 8); to = from + 9 end
+	for i = from, to do
+		local r = G.results[i]
+		if r then table.insert(pips, r.score > 0 and { state = "done", color = TIERS[r.score].color } or { state = "miss" })
+		elseif i == G.idx then table.insert(pips, { state = "cur" })
+		else table.insert(pips, { state = "todo" }) end
+	end
+	local label = promptLabel()
+	if G.phase == "reveal" and G.len > 0 and G.idx >= G.len then label = "FLUSH COMPLETE" end
+	gameUI:setProgress(pips, label)
+end
+
+local function focusInput()
+	if gameUI and gameUI.textBox and not UserInputService.TouchEnabled then
+		task.defer(function() if gameUI and gameUI.textBox then gameUI.textBox:CaptureFocus() end end)
+	end
+end
+
+local function beginPrompt(pv, fresh)
+	G.idx = pv.idx; G.prompt = pv.prompt; G.seconds = pv.seconds; G.fix = nil
+	if gameUI then
+		gameUI:showReveal(nil); gameUI:showSink(nil); gameUI:setFeedback(nil); gameUI:setSuggest(nil)
+		gameUI.textBox.Text = ""
+		gameUI:setPrompt(pv.prompt, promptLabel(), fresh)
+	end
+	if fresh then
+		G.phase = "intro"; G.phaseEnd = os.clock() + INTRO
+		Ocean.setView("intro", true); Ocean.flush(nowMs())
+		play("flush")
+	else
+		G.phase = "answering"; G.phaseEnd = os.clock() + G.seconds
+		if gameUI then gameUI:setIntro(nil) end
+		focusInput()
+	end
+	renderHud()
+end
+
+local function revealNow()
+	if not G then return end
+	G.phase = "reveal"
+	local r = G.results[G.idx]
+	if gameUI then
+		gameUI:setIntro(nil)
+		gameUI:showReveal({ score = r.score, answer = r.answer, input = r.input, reason = r.reason, last = G.len > 0 and G.idx >= G.len, endless = G.len == 0 })
+	end
+	renderHud()
+end
+
+local function accept(res)
+	local t = TIERS[res.score]
+	G.results[G.idx] = { score = res.score, answer = res.answer, input = res.input, q = G.prompt }
+	G.sinkFrom = G.depth
+	G.score += res.score
+	G.depth += t.depth
+	G.phase = "sinking"
+	play("correct" .. res.score)
+	task.delay(S.settings.reduced and 0 or 0.45, function() play("descend" .. res.score) end)
+	if gameUI then
+		gameUI:setFeedback(nil); gameUI:setSuggest(nil)
+		gameUI:showSink({ score = res.score, answer = res.answer }, G.sinkFrom)
+	end
+	Ocean.setShrimpX(0.5)
+	local dur = S.settings.reduced and 0 or (1500 + t.depth * 1.9)
+	local myGame = G
+	task.delay(S.settings.reduced and 0 or 0.45, function()
+		if G ~= myGame then return end
+		Ocean.setDepth(G.depth, nowMs(), { duration = dur })
+	end)
+	task.delay(S.settings.reduced and 0.3 or (0.45 + dur / 1000 + 0.45), function()
+		if G ~= myGame or G.phase ~= "sinking" then return end
+		if gameUI then gameUI:showSink(nil) end
+		Ocean.setShrimpX(nil)
+		G.shownDepth = G.depth
+		revealNow()
+	end)
+	renderHud(G.sinkFrom)
+end
+
+local function missWith(reason, input)
+	G.results[G.idx] = { score = 0, answer = nil, input = input, reason = reason, q = G.prompt }
+	play("miss")
+	revealNow()
+end
+
+local function submit(text)
+	if not G or G.phase ~= "answering" or busy then return end
+	text = (text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	if text == "" then return end
+	busy = true
+	local r = call("submit", { text = text })
+	busy = false
+	if not G or G.phase ~= "answering" then return end
+	if r.error then toast(r.error) return end
+	if r.result == "hit" then
+		r.input = text
+		accept(r)
+	elseif r.result == "suggest" then
+		G.fix = r.label
+		if gameUI then
+			gameUI:setSuggest(text, r.label)
+			gameUI:setFeedback(nil)
+			gameUI.textBox.Text = r.label
+		end
+		focusInput()
+	elseif r.result == "dup" then
+		play("dup")
+		if gameUI then gameUI:setFeedback(string.format('Already tried "%s".', text), "warn") end
+		focusInput()
+	elseif r.result == "miss" then
+		if gameUI then gameUI:setSuggest(nil); gameUI:setFeedback(string.format('"%s" isn\'t on our list. Try again!', text), "bad") end
+		play("wrong")
+		focusInput()
+	elseif r.result == "timeout" then
+		missWith("time", text)
+	end
+end
+
+local function timeUp()
+	if not G or G.phase ~= "answering" then return end
+	G.phase = "waiting"
+	local text = gameUI and gameUI.textBox.Text or ""
+	local r = call("timeout", { text = text })
+	if not G then return end
+	if r.result == "hit" then r.input = text; G.phase = "answering"; accept(r)
+	else missWith("time", text ~= "" and text or nil) end
+end
+
+local function showResultsFrom(res)
+	S.lastResult = res
+	local n = res.prompts or #res.rows
+	local mode
+	if res.pack then mode = string.upper((res.packName or res.pack) .. " PACK COMPLETE")
+	elseif res.ranked then mode = string.format("RANKED %d-PROMPT FLUSH", n)
+	elseif (res.len or 0) == 0 then mode = string.format("ENDLESS RUN · %d PROMPTS", n)
+	else mode = string.format("%d-PROMPT FLUSH COMPLETE", n) end
+	local depth = res.depth or 0
+	local line
+	if res.cheated then line = { { "Cheat code used · no coins this time" } }
+	elseif res.ranked then line = { { "Paid out " }, { fmt(res.paid or 0) .. " coins", bold = true } }
+	else line = { { "Free game · +" .. fmt(res.paid or 0) .. " coins · play " }, { "Ranked", bold = true }, { " to win more" } } end
+	local rows = {}
+	for _, r in res.rows do table.insert(rows, { score = r.score, q = r.q, answer = r.answer, input = r.input, reason = r.reason, tries = r.tries }) end
+	S.results = {
+		modeLabel = mode, score = res.score, depth = depth, n = n,
+		zone = depth > 0 and ("Reached the " .. Ocean.ZONES[Ocean.zoneIndex(depth) + 1].name) or "Never left the bowl",
+		coinsLine = line, results = rows, stats = res.logbook, againLabel = res.pack and "PLAY PACK AGAIN" or "PLAY AGAIN",
+		expanded = {}, pack = res.pack, countUp = true,
+	}
+	S.resultsScroll = 0
+	if res.profile then setProfile(res.profile) end
+	G = nil
+	S.screen = "results"
+	Ocean.setView("results")
+	play("finish")
+	render()
+	S.results.countUp = false
+end
+
+local function nextPrompt()
+	if not G or G.phase ~= "reveal" or busy then return end
+	busy = true
+	local r = call("next")
+	busy = false
+	if r.error then toast(r.error) return end
+	if r.done then showResultsFrom(r) return end
+	if r.prompt then beginPrompt(r.prompt, false) end
+end
+
+local function endRun()
+	if not G or busy then return end
+	busy = true
+	local r = call("endRun")
+	busy = false
+	if r.error then toast(r.error) return end
+	showResultsFrom(r)
+end
+
+function S.startGame(mode, packKey)
+	if G then render() return end
+	if busy then return end
+	closeOverlay()
+	busy = true
+	local r = call("start", { mode = mode, len = S.len, pack = packKey })
+	busy = false
+	if r.error then toast(r.error) return end
+	if S.profile then S.profile.coins = r.coins or S.profile.coins end
+	G = { mode = mode, ranked = mode == "ranked", pack = packKey, len = (mode == "ranked" and rankedLen()) or S.len, idx = 1, score = 0, depth = 0, shownDepth = 0, results = {} }
+	if r.extraTime then toast("Extra Time boost: +5s every prompt") end
+	play("start")
+	S.screen = "game"
+	Ocean.setDepth(0, nowMs(), { instant = true })
+	render()
+	beginPrompt(r.prompt, true)
+end
+
+function S.quit()
+	if not G then return showTitle() end
+	local answered = 0
+	for _ in G.results do answered += 1 end
+	if G.ranked then return confirm("End this ranked run now? You get paid for the points you have so far.", endRun) end
+	if G.len == 0 and answered > 0 then return confirm("End this endless run? Your score so far is saved.", endRun) end
+	confirm("Quit this flush? Its progress will be thrown away.", function()
+		call("endRun")
+		G = nil
+		Ocean.setDepth(0, nowMs(), { instant = true })
+		showTitle()
+	end)
+end
+
+---------------------------------------------------------------- screens
+showTitle = function()
+	if G then return render() end
+	S.screen = "title"
+	Ocean.setView("title")
+	render()
+end
+showPacks = function()
+	if G then return render() end
+	S.screen = "packs"
+	Ocean.setView("menu")
+	render()
+end
+
+local function rulesText()
+	local L = rankedLen()
+	local profit = S.profile and S.profile.profitAt and S.profile.profitAt[tostring(S.len)] or 0
+	return string.format("Ranked: the %d-coin entry is spent when the run starts · same price for everyone · score %d+ in %d prompts to come out ahead · your first 3 runs pay ×1.3/×1.2/×1.1, and ×1.3 after 3 losses in a row · free games pay coins too · coins are earned by playing, never bought · shop looks cost Robux and are cosmetic", price(), profit, L)
+end
+
+local function buildResults()
+	local data = S.results
+	local root = Results.build(screenRoot, data, {
+		onCopy = function()
+			local lines = {}
+			local sq = { [0] = "⬛", [10] = "⬜", [30] = "🟦", [60] = "🟥", [85] = "🟪", [100] = "🟨" }
+			for _, r in data.results do table.insert(lines, sq[r.score] or "⬛") end
+			local text = string.format("FLUSHED · %d prompts 🦆\n%d/%d · -%sm\n%s", data.n, data.score, data.n * 100, fmt(data.depth), table.concat(lines))
+			openOverlay(function()
+				Panels.modal(overlayRoot, "COPY RESULT", function(b, w, U0)
+					local tb = Instance.new("TextBox")
+					tb.Text = text; tb.ClearTextOnFocus = false; tb.TextEditable = false; tb.MultiLine = true
+					tb.Font = Enum.Font.Code; tb.TextSize = 16; tb.TextColor3 = hex("#f2f8fc"); tb.BackgroundColor3 = rgb(16, 26, 20); tb.BorderSizePixel = 0
+					tb.TextXAlignment = Enum.TextXAlignment.Left; tb.TextYAlignment = Enum.TextYAlignment.Top
+					tb.Position = UDim2.fromOffset(0, 0); tb.Size = UDim2.fromOffset(math.floor(w), 90); tb.Parent = b
+					task.defer(function() tb:CaptureFocus(); tb.SelectionStart = 1; tb.CursorPosition = #tb.Text + 1 end)
+					Kit.text(b, 0, 100, UserInputService.TouchEnabled and "Hold the text to copy it." or "Selected: press Ctrl+C (Cmd+C on a Mac) to copy.", { family = "plex", size = 0.85 * U0, color = Panels.C.muted })
+					return 100 + Kit.lh(0.85 * U0)
+				end, closeOverlay)
+			end)
+		end,
+		onShare = function()
+			pcall(function() SocialService:PromptGameInvite(player) end)
+		end,
+		onAgain = function()
+			if data.pack then S.startGame("pack", data.pack) else openPlayAgain() end
+		end,
+		onPacks = showPacks, onStats = openStats, onHome = showTitle,
+		onToggle = function(i)
+			if data.expanded[i] then data.expanded[i] = nil
+			else
+				local r = call("answers", { i = i })
+				if r.error then return toast(r.error) end
+				data.expanded[i] = r.list
+			end
+			render()
+		end,
+	})
+	root.CanvasPosition = Vector2.new(0, S.resultsScroll or 0)
+	root:GetPropertyChangedSignal("CanvasPosition"):Connect(function() S.resultsScroll = root.CanvasPosition.Y end)
+end
+
+render = function()
+	local size = gui.AbsoluteSize
+	if size.X < 10 then return end
+	Css.set(size.X, size.Y)
+	do -- where Roblox's own top-left buttons end (the game HUD keeps clear of them)
+		local ok, r = pcall(function() return GuiService.TopbarInset end)
+		GameUI.topbar = (ok and r and r.Height > 0) and { right = r.Min.X, bottom = r.Max.Y } or nil
+	end
+	clear(screenRoot)
+	gameUI = nil
+	local scr = S.screen
+	if scr == "title" then
+		local b = boost()
+		Title.build(screenRoot, { coins = coins(), len = S.len, price = price(), boost = b, rules = rulesText(), poor = coins() < price() }, {
+			onFlush = function() S.startGame("unlimited") end,
+			onRanked = function()
+				if coins() < price() then toast(string.format("Ranked costs %d coins. Free games pay coins: play a few first!", price())) return end
+				S.startGame("ranked")
+			end,
+			onLen = function(n) S.len = n; render() end,
+			onPacks = showPacks, onShop = openShop, onStats = openStats, onMenu = openMenu, onHowTo = openHelp,
+		})
+	elseif scr == "game" and G then
+		gameUI = GameUI.new(screenRoot, {
+			onSubmit = submit,
+			onInput = function(t)
+				if G and G.fix and t ~= G.fix then G.fix = nil; if gameUI then gameUI:setSuggest(nil) end end
+			end,
+			onNext = nextPrompt, onEndRun = endRun, onMenu = function() openMenu() end, onQuit = function() S.quit() end,
+			onRestart = function() S.quit() end,
+			onSound = function() S.muted = not S.muted; render() end,
+		})
+		gameUI.state.muted = S.muted
+		gameUI:setPrompt(G.prompt or "", promptLabel(), G.phase == "intro")
+		if G.phase == "intro" then gameUI:setIntro(math.max(1, math.ceil(G.phaseEnd - os.clock()))) end
+		if G.phase == "reveal" then revealNow() end
+		renderHud()
+	elseif scr == "results" and S.results then
+		buildResults()
+	elseif scr == "packs" then
+		local packs = {}
+		for _, pk in (S.profile and S.profile.packs) or {} do if pk.key ~= "general" then table.insert(packs, pk) end end
+		-- the website's order
+		local ORDER = { geography = 1, movies = 2, sports = 3, gaming = 4, science = 5, music = 6, language = 7, pop = 8, fun = 9, general = 10 }
+		table.sort(packs, function(a, b) return (ORDER[a.key] or 99) < (ORDER[b.key] or 99) end)
+		Panels.packs(screenRoot, packs, { onClose = showTitle, onPick = function(key) S.startGame("pack", key) end })
+	else
+		S.screen = "title"
+		return render()
+	end
+	buildChrome()
+	if S.overlay then
+		for _, c in overlayRoot:GetChildren() do if not c:IsA("UIScale") then c:Destroy() end end
+		S.overlay()
+	end
+end
+
+---------------------------------------------------------------- the scene (Ocean) drawn every frame
+local function resizeScene()
+	local vp = sceneGui.AbsoluteSize
+	if vp.X < 10 then return end
+	Ocean.resize(vp.X, vp.Y)
+	local ctx = Ocean.state.ctx
+	if sceneImg then sceneImg:Destroy(); sceneImg = nil end
+	sceneW, sceneH = ctx.W, ctx.H
+	local ok, ei = pcall(function() return AssetService:CreateEditableImage({ Size = Vector2.new(sceneW, sceneH) }) end)
+	if ok and ei then
+		sceneImg = ei
+		sceneLabel.ImageContent = Content.fromObject(ei)
+	else
+		warn("[FLUSHED] Couldn't make the scene image:", ei)
+	end
+end
+
+local lastTimerDraw, lastIntroN, lastTickSec = 0, nil, nil
+RunService.RenderStepped:Connect(function()
+	local now = nowMs()
+	local ctx = Ocean.frame(now)
+	if sceneImg and ctx then sceneImg:WritePixelsBuffer(Vector2.zero, Vector2.new(sceneW, sceneH), ctx.buf) end
+	if not G then return end
+	local t = os.clock()
+	if G.phase == "intro" then
+		local left = G.phaseEnd - t
+		local n = math.max(1, math.ceil(left))
+		if n ~= lastIntroN and gameUI then lastIntroN = n; gameUI:setIntro(n) end
+		if left <= 0 then
+			lastIntroN = nil
+			G.phase = "answering"; G.phaseEnd = t + G.seconds
+			if gameUI then gameUI:setIntro(nil) end
+			Ocean.setView("game"); Ocean.setShrimpX(nil); Ocean.setDepth(0, now, { duration = 900 })
+			play("go")
+			focusInput()
+		end
+	elseif G.phase == "answering" then
+		local left = math.max(0, G.phaseEnd - t)
+		if gameUI and t - lastTimerDraw > 1 / 20 then lastTimerDraw = t; gameUI:setTimer(left, G.seconds) end
+		local sec = math.ceil(left)
+		if left <= 5 and sec > 0 and sec ~= lastTickSec then lastTickSec = sec; play("tickUrgent", 0.2) end
+		if left <= 0 then task.spawn(timeUp) end
+	end
+	if gameUI then gameUI:update(Ocean, G.phase == "sinking") end
+end)
+Ocean.onDepth(function(m)
+	if G and G.phase == "sinking" and gameUI then gameUI:setHud(math.floor(m + 0.5), G.score) end
+end)
+
+-- keyboard: Enter = next on the reveal, M = menu, Esc = close
+UserInputService.InputBegan:Connect(function(input, processed)
+	if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+	if input.KeyCode == Enum.KeyCode.Escape and S.overlay then closeOverlay() return end
+	if processed then return end
+	if input.KeyCode == Enum.KeyCode.Return or input.KeyCode == Enum.KeyCode.KeypadEnter then
+		if G and G.phase == "reveal" and not S.overlay then nextPrompt()
+		elseif not G and S.screen == "title" and not S.overlay then S.startGame("unlimited") end
+	elseif input.KeyCode == Enum.KeyCode.M then
+		if S.overlay then closeOverlay() else openMenu() end
+	end
+end)
+
+push.OnClientEvent:Connect(function(msg)
+	if type(msg) ~= "table" then return end
+	if msg.kind == "profile" then
+		setProfile(msg.profile)
+		if msg.bought then toast("Unlocked: " .. msg.bought); play("buy") end
+		if S.overlay == nil then render() else openOverlay(S.overlay); buildChrome() end
+	end
+end)
+
+-- relayout when the window / phone rotates
+local pending = false
+local function relayout()
+	if pending then return end
+	pending = true
+	task.delay(0.15, function()
+		pending = false
+		resizeScene()
+		render()
+	end)
+end
+gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+sceneGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayout)
+
+-- every button clicks (the website's Sound.click)
+gui.DescendantAdded:Connect(function(d)
+	if d:IsA("TextButton") then d.Activated:Connect(function() play("click", 0.15) end) end
+end)
+
+---------------------------------------------------------------- start
+resizeScene()
+Ocean.setView("title", true)
+render()
+task.spawn(function()
+	for _ = 1, 20 do
+		local p = call("profile")
+		if p and not p.error and p.coins then setProfile(p); render(); break end
+		task.wait(0.5)
+	end
 end)

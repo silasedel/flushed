@@ -63,11 +63,22 @@ function TextRaster.layout(text, opts)
 		else
 			-- greedy word wrap like CSS (break at spaces; very long words break anywhere)
 			local cur, curW = "", 0
-			for word, gap in para:gmatch("(%S+)(%s*)") do
+			-- break opportunities: spaces, and after a hyphen inside a word (like Chrome)
+			local pieces = {}
+			for w0, g0 in para:gmatch("(%S+)(%s*)") do
+				local parts = {}
+				for part in w0:gmatch("[^%-]*%-+") do table.insert(parts, part) end
+				local rest = w0:gsub("^.*%-", "")
+				if #parts == 0 or rest ~= "" then table.insert(parts, #parts == 0 and w0 or rest) end
+				for k, part in parts do table.insert(pieces, { part, k == #parts and g0 or "" }) end
+			end
+			for _, pc in pieces do
+				local word, gap = pc[1], pc[2]
 				local ww = measure(word)
 				local spaceW = (#gap > 0) and measure(" ") or 0
 				if cur ~= "" and curW + ww > opts.width + 0.01 then
-					table.insert(lines, { cur, curW })
+					local t = cur:gsub("%s+$", "")
+					table.insert(lines, { t, measure(t) })
 					cur, curW = "", 0
 				end
 				if ww > opts.width and cur == "" then -- hard break a long word
