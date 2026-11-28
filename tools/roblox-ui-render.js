@@ -21,6 +21,8 @@ local function new(class) return setmetatable({ ClassName = class, _kids = {}, V
 	Activated = { Connect = function() end } }, Inst) end
 function Inst:IsA(c) return self.ClassName == c or (c == "GuiObject") end
 function Inst:GetChildren() return table.clone(self._kids) end
+function Inst:Destroy() local p = rawget(self, "_parent"); if p then for i, c in p._kids do if c == self then table.remove(p._kids, i) break end end end; rawset(self, "_parent", nil) end
+function Inst:FindFirstChild(n) for _, c in self._kids do if c.Name == n then return c end end return nil end
 setmetatable(Inst, { __index = function(t, k) return nil end })
 local mt = { __index = function(self, k) local v = rawget(Inst, k); if v then return v end; for _, c in rawget(self, "_kids") do if c.Name == k then return c end end; return nil end,
 	__newindex = function(self, k, v) if k == "Parent" then if v then table.insert(v._kids, self) end; rawset(self, "_parent", v) else rawset(self, k, v) end end }
@@ -44,8 +46,21 @@ local function hex(buf) return (buffer.tostring(buf):gsub(".", function(c) retur
 print("SCENE " .. scene.W .. " " .. scene.H .. " " .. hex(scene.buf))
 local guiRoot = mk("Frame"); guiRoot.Size = UDim2.new(0, W, 0, H)
 local rules = "Ranked: entry is spent when the run starts and is non-refundable once you answer. Same price for everyone. Payout = 1 coin per 5 points up to the typical score, then 1 coin per 25 points above it, rounded down. About half of runs come out ahead; overall the house keeps a small cut. Boosts: your first 3 ranked runs pay ×1.3/×1.2/×1.1, and after 3 losses in a row your next run pays ×1.3. Coins are earned in-game only and can't be bought. Shop items are cosmetic, final sale."
-local Title = require("./src/client/TitleScreen")
-local _, rects = Title.build(guiRoot, { coins = 0, len = 10, price = 58, boost = { x = 1.3, why = "NEW PLAYER" }, rules = rules }, {})
+local rects
+if "${screen}" == "title" then
+	local Title = require("./src/client/TitleScreen")
+	_, rects = Title.build(guiRoot, { coins = 0, len = 10, price = 58, boost = { x = 1.3, why = "NEW PLAYER" }, rules = rules }, {})
+else
+	local Game = require("./src/client/GameScreen")
+	local g = Game.new(guiRoot, {})
+	g:setHud(0, 0)
+	g:setProgress({ { state = "cur" }, { state = "todo" }, { state = "todo" }, { state = "todo" }, { state = "todo" } }, "PROMPT 1 OF 5")
+	g:setPrompt("Name something you might spot on a national park trip.", "PROMPT 1 OF 5")
+	g:setTimer(23, 25)
+	g:setFeedback([["qwzz" isn't on our list]], "bad")
+	g:update(Ocean, false)
+	rects = g.rects
+end
 for name, r in rects do print(string.format("RECT %s %.1f %.1f %.1f %.1f", name, r[1], r[2], r[3], r[4])) end
 local function walk(o, px, py, pw, ph)
 	if o.Visible == false then return end
